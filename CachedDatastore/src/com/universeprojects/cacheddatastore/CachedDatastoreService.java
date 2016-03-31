@@ -11,9 +11,12 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.google.appengine.api.datastore.Cursor;
 import com.google.appengine.api.datastore.DatastoreService;
+import com.google.appengine.api.datastore.DatastoreServiceFactory;
 import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.EntityNotFoundException;
 import com.google.appengine.api.datastore.FetchOptions;
@@ -29,6 +32,10 @@ import com.google.appengine.api.memcache.InvalidValueException;
 import com.google.appengine.api.memcache.MemcacheService;
 import com.google.appengine.api.memcache.MemcacheService.IdentifiableValue;
 import com.google.appengine.api.memcache.MemcacheService.SetPolicy;
+import com.google.appengine.api.memcache.MemcacheServiceFactory;
+import com.google.appengine.api.utils.SystemProperty;
+import com.google.appengine.tools.remoteapi.RemoteApiInstaller;
+import com.google.appengine.tools.remoteapi.RemoteApiOptions;
 
 
 public class CachedDatastoreService  
@@ -84,16 +91,73 @@ public class CachedDatastoreService
 	
 
 	
-	public static void main(String[] args)
+	private static RemoteApiOptions options = null;
+	private static boolean disableRemoteAPI = false;
+	
+	
+	public CachedDatastoreService()
 	{
-//		GameFunctions gf = new GameFunctions();
-//		gf.getDB();
-//		Query test = new Query("Character");
-//		Key keyTest = KeyFactory.createKey("Location", 1234);
-//		test.setFilter(new FilterPredicate("locationKey", FilterOperator.EQUAL, keyTest));
-//		System.out.println(test.getFilter().toString());
+		if (disableRemoteAPI==false && SystemProperty.environment.value() != SystemProperty.Environment.Value.Production)
+		{
+			
+			if (options==null)
+				options = new RemoteApiOptions().server("playinitium.appspot.com", 443).credentials(System.getProperty("email"), System.getProperty("password"));
+			
+			try
+			{
 		
+				RemoteApiInstaller installer = new RemoteApiInstaller();
+				installer.install(options);
+			}
+			catch(IllegalStateException ise)
+			{
+				// Ignore. Remote API is probably already installed
+			}
+			catch(Exception e)
+			{
+				// Ok fine, no remote API
+				disableRemoteAPI=true;
+				Logger.getLogger(CachedDatastoreService.class.toString()).log(Level.WARNING, "Failed to connect to remote API", e);
+			}
+		}
+		
+		db = DatastoreServiceFactory.getDatastoreService();
+		mc = getMC();
 	}
+	
+	public MemcacheService getMC()
+	{
+		if (mc!=null)
+			return mc;
+		
+		if (disableRemoteAPI==false && SystemProperty.environment.value() != SystemProperty.Environment.Value.Production)
+		{
+			try
+			{
+//				Properties p = new Properties();
+//				InputStream in = new FileInputStream("C:\\Universe (Non Repo)\\MySpacewarConfig\\db.properties");
+//				p.load(in);
+//				in.close();
+		
+				RemoteApiInstaller installer = new RemoteApiInstaller();
+				installer.install(options);
+			}
+			catch(IllegalStateException ise)
+			{
+				// Ignore. Remote API is probably already installed
+			}
+			catch(Exception e)
+			{
+				// Ok fine, no remote API
+				disableRemoteAPI=true;
+				Logger.getLogger(getClass().toString()).log(Level.WARNING, "Failed to connect to remote API", e);
+			}
+		}
+
+		mc = MemcacheServiceFactory.getMemcacheService();
+		return mc;
+	}
+
 
 	public boolean isQueryCacheEnabled()
 	{
@@ -175,15 +239,6 @@ public class CachedDatastoreService
 			transactionallyDeletedEntities.clear();
 	}
 	
-	public CachedDatastoreService(DatastoreService db, MemcacheService mc) {
-		this.db = db;
-		this.mc = mc;
-	}
-	
-	public MemcacheService getMC()
-	{
-		return mc;
-	}
 
 	public void beginTransaction()
 	{

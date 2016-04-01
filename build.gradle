@@ -14,6 +14,7 @@ apply plugin: 'eclipse'
 apply plugin: 'idea'
 apply plugin: 'war'
 apply plugin: "appengine"
+apply plugin: 'maven-publish'
 
 repositories {
     jcenter()
@@ -30,4 +31,26 @@ dependencies {
     providedCompile "com.google.appengine:appengine-remote-api:${appengineVersion}"
 
     testCompile "com.google.appengine:appengine-testing:${appengineVersion}"
+}
+
+publishing {
+    repositories {
+        maven {
+            credentials {
+                username = "${System.getProperty("mavenUser")}"
+                password = "${System.getProperty("mavenPassword")}"
+            }
+            url "http://dev.universeprojects.com/archiva/repository/snapshots/"
+        }
+    }
+    publications {
+        mavenJava(MavenPublication) {
+            groupId 'com.universeprojects'
+            artifactId 'cached-datastore'
+            //noinspection GroovyAssignabilityCheck
+            version '1.0-SNAPSHOT'
+
+            from components.java
+        }
+    }
 }

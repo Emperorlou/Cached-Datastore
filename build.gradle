@@ -1,5 +1,17 @@
+buildscript {
+	repositories {
+		jcenter()
+	}
+	dependencies {
+		classpath 'com.google.appengine:gradle-appengine-plugin:1.9.21'
+	}
+
+}
+
+
 apply plugin: 'java'
 apply plugin: 'eclipse'
+apply plugin: 'idea'
 apply plugin: 'war'
 apply plugin: "appengine"
 
@@ -13,8 +25,9 @@ dependencies {
 	providedCompile "javax.servlet:javax.servlet-api:3.0.1"
 
     appengineSdk "com.google.appengine:appengine-java-sdk:${appengineVersion}"
-    providedCompile "com.google.appengine:appengine-api-1.0-sdk:${appengineVersion}"
-    providedCompile "com.google.appengine:appengine-api-stubs:${appengineVersion}"
-    
+	providedCompile "com.google.appengine:appengine-api-stubs:${appengineVersion}"
+	providedCompile "com.google.appengine:appengine-api-1.0-sdk:${appengineVersion}"
+	providedCompile "com.google.appengine:appengine-remote-api:${appengineVersion}"
+
     testCompile "com.google.appengine:appengine-testing:${appengineVersion}"
 }

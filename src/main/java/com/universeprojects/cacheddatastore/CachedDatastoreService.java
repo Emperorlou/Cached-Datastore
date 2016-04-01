@@ -708,6 +708,11 @@ public class CachedDatastoreService
 		
 		return null;
 	}
+
+	public KeyRange allocateIds(Key parentKey, String kind, int num) {
+		return db.allocateIds(parentKey, kind, num);
+	}
+
 	public KeyRange allocateIds(String kind, int num) {
 		return db.allocateIds(kind, num);
 	}

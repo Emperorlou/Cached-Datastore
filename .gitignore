@@ -1,3 +1,9 @@
-/CachedDatastore/.settings
+.gradle
+build/
 
-/CachedDatastore/bin
+war
+bin
+.settings
+.classpath
+.project
+*.iml

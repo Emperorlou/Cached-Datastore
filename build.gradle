@@ -1,0 +1,20 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'war'
+apply plugin: "appengine"
+
+repositories {
+    jcenter()
+}
+
+String appengineVersion = "1.9.30"
+
+dependencies {
+	providedCompile "javax.servlet:javax.servlet-api:3.0.1"
+
+    appengineSdk "com.google.appengine:appengine-java-sdk:${appengineVersion}"
+    providedCompile "com.google.appengine:appengine-api-1.0-sdk:${appengineVersion}"
+    providedCompile "com.google.appengine:appengine-api-stubs:${appengineVersion}"
+    
+    testCompile "com.google.appengine:appengine-testing:${appengineVersion}"
+}

@@ -141,7 +141,7 @@ public class CachedEntity implements Cloneable,Serializable {
 	
 	public boolean isUnindexedProperty(String propertyName)
 	{
-		return isUnindexedProperty(propertyName);
+		return entity.isUnindexedProperty(propertyName);
 	}
 	
 	public void removeProperty(String propertyName)

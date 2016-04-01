@@ -83,7 +83,10 @@ public class CachedDatastoreService
 	
 	private static RemoteApiOptions options = null;
 	private static boolean disableRemoteAPI = false;
-	
+
+	public static void disableRemoteAPI() {
+		disableRemoteAPI = true;
+	}
 	
 	public CachedDatastoreService()
 	{

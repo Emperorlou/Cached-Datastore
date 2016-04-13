@@ -265,7 +265,7 @@ public class CachedDatastoreService
 			putEntitiesToMemcache(transactionallyChangedEntities.values());
 		
 		if (transactionallyDeletedEntities!=null)
-			mc.deleteAll(transactionallyDeletedEntities);
+			deleteEntitiesFromMemcache(transactionallyDeletedEntities);
 		
 		clearTransactionEntityTrackers();
 	}

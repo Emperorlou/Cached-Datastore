@@ -28,7 +28,7 @@ import com.google.appengine.tools.remoteapi.RemoteApiInstaller;
 import com.google.appengine.tools.remoteapi.RemoteApiOptions;
 
 
-@SuppressWarnings("PointlessBooleanExpression")
+@SuppressWarnings("unused")
 public class CachedDatastoreService
 {
 	final public static boolean statsTracking = false;
@@ -95,6 +95,7 @@ public class CachedDatastoreService
 		{
 			
 			if (options==null)
+				//noinspection deprecation
 				options = new RemoteApiOptions().server("playinitium.appspot.com", 443).credentials(System.getProperty("email"), System.getProperty("password"));
 			
 			try
@@ -166,7 +167,7 @@ public class CachedDatastoreService
 	
 	protected void putEntitiesToMemcache(Iterable<Entity> entities)
 	{
-		Map<String, Entity> map = new HashMap<String, Entity>();
+		Map<String, Entity> map = new HashMap<>();
 		for(Entity entity:entities)
 			map.put(mcPrefix+entity.getKey().toString(), entity);
 		mc.putAll(map);
@@ -179,7 +180,7 @@ public class CachedDatastoreService
 	
 	private void deleteEntitiesFromMemcache(Collection<Key> entityKeys)
 	{
-		ArrayList<String> list = new ArrayList<String>();
+		ArrayList<String> list = new ArrayList<>();
 		for(Key key:entityKeys)
 			list.add(mcPrefix+key.toString());
 		mc.deleteAll(list);
@@ -199,7 +200,7 @@ public class CachedDatastoreService
 		//TODO: Enter incomplete entities into the transaction!
 		
 		if (transactionallyChangedEntities==null)
-			transactionallyChangedEntities = new HashMap<Key, Entity>();
+			transactionallyChangedEntities = new HashMap<>();
 		
 		transactionallyChangedEntities.put(entity.getKey(), entity);
 		
@@ -214,7 +215,7 @@ public class CachedDatastoreService
 		if (key==null)
 			return;
 		if (transactionallyDeletedEntities==null)
-			transactionallyDeletedEntities = new HashSet<Key>();
+			transactionallyDeletedEntities = new HashSet<>();
 		
 		transactionallyDeletedEntities.add(key);
 		
@@ -369,7 +370,7 @@ public class CachedDatastoreService
 	
 	public CachedEntity get(Key entityKey) throws EntityNotFoundException
 	{
-		CachedEntity result = null;
+		CachedEntity result;
 		if (entityKey==null) return null;
 		
 		if (cacheEnabled && isTransactionActive()==false)
@@ -378,7 +379,8 @@ public class CachedDatastoreService
 			if (result==null)
 			{
 				result = CachedEntity.wrap(db.get(entityKey));
-				mc.put(mcPrefix+entityKey.toString(), result.getEntity());
+				if(result != null)
+					mc.put(mcPrefix+entityKey.toString(), result.getEntity());
 				if (statsTracking)
 					incrementStat(DS_GETS);		// For statistics tracking of the cache's success
 			}
@@ -409,7 +411,7 @@ public class CachedDatastoreService
 		if (isTransactionActive())
 		{
 			if (transactionallyFetchedEntities==null)
-				transactionallyFetchedEntities = new HashSet<Key>();
+				transactionallyFetchedEntities = new HashSet<>();
 			transactionallyFetchedEntities.add(entityKey);
 		}
 	}
@@ -436,7 +438,7 @@ public class CachedDatastoreService
 			fo = fo.startCursor(startCursor);
 		
 
-		List<Key> keys = new ArrayList<Key>();
+		List<Key> keys = new ArrayList<>();
 		QueryResultList<Entity> entities = pq.asQueryResultList(fo);
 		for(Entity e:entities)
 			keys.add(e.getKey());
@@ -464,7 +466,7 @@ public class CachedDatastoreService
 		FetchOptions fo = FetchOptions.Builder.withLimit(limit).chunkSize(chunkSize).offset(offset);
 		
 
-		List<Key> keys = new ArrayList<Key>();
+		List<Key> keys = new ArrayList<>();
 		QueryResultList<Entity> entities = pq.asQueryResultList(fo);
 		for(Entity e:entities)
 			keys.add(e.getKey());
@@ -492,13 +494,13 @@ public class CachedDatastoreService
 		// First try to fetch all entities from memcache...
 
 		// Fetch the entities from MC, but only if caching is turned on and there is no transaction currently active
-		List<String> entityKeyStrings = new ArrayList<String>();
+		List<String> entityKeyStrings = new ArrayList<>();
 		Map<String, Object> entitiesFromMC = null;
 		if (cacheEnabled && isTransactionActive()==false)
 		{
 			for(Key key:keys)
 				entityKeyStrings.add(mcPrefix+key.toString());
-			entitiesFromMC = (Map<String, Object>)mc.getAll(entityKeyStrings);
+			entitiesFromMC = mc.getAll(entityKeyStrings);
 		}
 		
 		if (entitiesFromMC!=null)
@@ -506,7 +508,7 @@ public class CachedDatastoreService
 				incrementStat(QUERYKEYCACHE_MC_ENTITIES, entitiesFromMC.size());
 		
 		// Now check to see if we got all the entities we need...
-		List<Key> keysThatStillNeedFetching = new ArrayList<Key>();
+		List<Key> keysThatStillNeedFetching = new ArrayList<>();
 		for(Key key:keys)
 		{
 			String requiredKeyString = mcPrefix+key.toString();
@@ -528,20 +530,21 @@ public class CachedDatastoreService
 			if (isTransactionActive())
 			{
 				if (transactionallyFetchedEntities==null)
-					transactionallyFetchedEntities = new HashSet<Key>();
+					transactionallyFetchedEntities = new HashSet<>();
 				transactionallyFetchedEntities.addAll(keysThatStillNeedFetching);
 			}
 			
-			if (entitiesFromDB!=null)
+			if (entitiesFromDB!=null) {
 				incrementStat(QUERYKEYCACHE_DB_ENTITIES, entitiesFromDB.size());
 
-			// Add these entities to memcache right away
-			putEntitiesToMemcache(entitiesFromDB.values());
+				// Add these entities to memcache right away
+				putEntitiesToMemcache(entitiesFromDB.values());
+			}
 		}
 			
 
 		// Now combine both lists into a single ordered result..
-		List<CachedEntity> result = new ArrayList<CachedEntity>();
+		List<CachedEntity> result = new ArrayList<>();
 		for(Key key:keys)
 		{
 			CachedEntity mcEntity = null;
@@ -605,8 +608,7 @@ public class CachedDatastoreService
 		Query q = new Query(kind);
 		q.setFilter(filter);
 		q.setKeysOnly();
-		List<Key> keys = fetchKeys(q, limit);
-		return keys;
+		return fetchKeys(q, limit);
 	}
 	
 	public List<CachedEntity> fetchAsList(String kind, Filter filter, int limit, Cursor startEntityCursor)
@@ -614,8 +616,7 @@ public class CachedDatastoreService
 		Query q = new Query(kind);
 		q.setFilter(filter);
 		List<Key> keys = fetchKeys(q, limit, startEntityCursor);
-		List<CachedEntity> list = fetchEntitiesFromKeys(keys);
-		return list;
+		return fetchEntitiesFromKeys(keys);
 	}
 	
 	
@@ -635,32 +636,31 @@ public class CachedDatastoreService
 	public List<CachedEntity> fetchAsList(Query q, int limit, Cursor startEntityCursor)
 	{
 		List<Key> keys = fetchKeys(q, limit, startEntityCursor);
-		List<CachedEntity> list = fetchEntitiesFromKeys(keys);
-		return list;
+		return fetchEntitiesFromKeys(keys);
 	}
 
 	public List<CachedEntity> fetchAsList(Query q, int limit, int offset)
 	{
 		List<Key> keys = fetchKeys(q, limit, offset);
-		List<CachedEntity> list = fetchEntitiesFromKeys(keys);
-		return list;
+		return fetchEntitiesFromKeys(keys);
 	}
 
 	
 	
 
-	public class CDSIterable<T> implements Iterable<T>
+	public class CDSIterable implements Iterable<CachedEntity>
 	{
-		Iterable<T> iterable;
+		Iterable<Entity> iterable;
 		public CDSIterable(Iterable<Entity> iterable)
 		{
-			this.iterable = (Iterable<T>)iterable;
+			//noinspection unchecked
+			this.iterable = iterable;
 		}
 
-		public class CDSIterator<T2> implements Iterator<T2>
+		public class CDSIterator implements Iterator<CachedEntity>
 		{
-			Iterator<T2> iterator;
-			public CDSIterator(Iterator<T2> iterator)
+			Iterator<Entity> iterator;
+			public CDSIterator(Iterator<Entity> iterator)
 			{
 				this.iterator = iterator;
 			}
@@ -671,10 +671,10 @@ public class CachedDatastoreService
 			}
 
 			@Override
-			public T2 next() {
-				CachedEntity e = CachedEntity.wrap((Entity)iterator.next());
+			public CachedEntity next() {
+				CachedEntity e = CachedEntity.wrap(iterator.next());
 				putEntityToMemcache(e.getEntity());
-				return (T2)e;
+				return e;
 			}
 
 			@Override
@@ -685,8 +685,8 @@ public class CachedDatastoreService
 		}
 		
 		@Override
-		public Iterator<T> iterator() {
-			return new CDSIterator<T>(iterable.iterator());
+		public Iterator<CachedEntity> iterator() {
+			return new CDSIterator(iterable.iterator());
 		}
 		
 	}
@@ -696,14 +696,14 @@ public class CachedDatastoreService
 		
 		prepareQuery(q);
 		
-		return new CDSIterable<CachedEntity>(pq.asIterable(FetchOptions.Builder.withChunkSize(500)));
+		return new CDSIterable(pq.asIterable(FetchOptions.Builder.withChunkSize(500)));
 	}
 	
 	public Iterable<CachedEntity> fetchAsIterable(Query q, int offset) {
 		
 		prepareQuery(q);
 		
-		return new CDSIterable<CachedEntity>(pq.asIterable(FetchOptions.Builder.withChunkSize(500).offset(offset)));
+		return new CDSIterable(pq.asIterable(FetchOptions.Builder.withChunkSize(500).offset(offset)));
 	}
 	
 	public Object prepareQuery(Query q)
@@ -739,7 +739,7 @@ public class CachedDatastoreService
 		if (list==null || list.isEmpty())
 			return; 
 		
-		List<Key> keys = new ArrayList<Key>();
+		List<Key> keys = new ArrayList<>();
 		for(CachedEntity e:list)
 			keys.add(e.getKey());
 		
@@ -896,9 +896,9 @@ public class CachedDatastoreService
 	/**
 	 * This is supposed to be an efficient memcache-backed counter.
 	 * It uses dual memcache storing in the hopes that it wont be cleared as often. 
-	 * @param entity
-	 * @param field
+	 * @param counterName
 	 * @param change
+	 * @param initialValue
 	 */
 	public Long changeCounter(String counterName, long change, Long initialValue)
 	{
@@ -991,7 +991,7 @@ public class CachedDatastoreService
 				}
 				else
 				{
-					return initialValue;
+					return null;
 				}
 			}
 			else
@@ -1006,9 +1006,9 @@ public class CachedDatastoreService
 	/**
 	 * This is supposed to be an efficient memcache-backed counter.
 	 * It uses dual memcache storing in the hopes that it wont be cleared as often. 
-	 * @param entity
-	 * @param field
+	 * @param counterName
 	 * @param change
+	 * @param initialValue
 	 */
 	public Double changeCounter(String counterName, double change, Double initialValue)
 	{
@@ -1060,7 +1060,7 @@ public class CachedDatastoreService
 				}
 				else
 				{
-					return initialValue;
+					return null;
 				}
 			}
 			else
@@ -1300,10 +1300,10 @@ public class CachedDatastoreService
 	{
 		while(true)
 		{
-			Set<Object> set = null;
+			Set<Object> set;
 			IdentifiableValue identifiable = mc.getIdentifiable(key);
 			if (identifiable==null)
-				set = new HashSet<Object>();
+				set = new HashSet<>();
 			else
 				set = (Set<Object>)identifiable.getValue();
 
@@ -1327,7 +1327,7 @@ public class CachedDatastoreService
 	{
 		while(true)
 		{
-			Set<Object> set = null;
+			Set<Object> set;
 			IdentifiableValue identifiable = mc.getIdentifiable(key);
 			if (identifiable==null)
 				return;

@@ -28,7 +28,8 @@ import com.google.appengine.tools.remoteapi.RemoteApiInstaller;
 import com.google.appengine.tools.remoteapi.RemoteApiOptions;
 
 
-public class CachedDatastoreService  
+@SuppressWarnings("PointlessBooleanExpression")
+public class CachedDatastoreService
 {
 	final public static boolean statsTracking = false;
 	final public static String MC_GETS = "Stats_MC_GETS";
@@ -181,7 +182,7 @@ public class CachedDatastoreService
 		ArrayList<String> list = new ArrayList<String>();
 		for(Key key:entityKeys)
 			list.add(mcPrefix+key.toString());
-		mc.deleteAll(entityKeys);
+		mc.deleteAll(list);
 	}
 	
 	private void markEntityChanged(Entity entity)

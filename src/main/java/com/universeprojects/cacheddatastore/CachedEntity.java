@@ -66,6 +66,7 @@ public class CachedEntity implements Cloneable,Serializable {
 		return entity;
 	}
 	
+	@SuppressWarnings("CloneDoesntCallSuperClone")
 	public CachedEntity clone()
 	{
 		return new CachedEntity(entity.clone());
@@ -160,7 +161,6 @@ public class CachedEntity implements Cloneable,Serializable {
 		if (schema!=null)
 		{
 			unindexed = schema.isFieldUnindexed(entity.getKind(), propertyName);
-			if (unindexed==null) unindexed = false;
 
 			// Here is a little nice thing to convert a string to a Text if that is the setting in the schema field
 //			if (sField.getType().equals(SchemaFieldType.Text) && value instanceof String)
@@ -178,7 +178,7 @@ public class CachedEntity implements Cloneable,Serializable {
 	public static CachedEntity wrap(Entity obj)
 	{
 		if (obj==null) return null;
-		return new CachedEntity((Entity)obj);
+		return new CachedEntity(obj);
 	}
 
 	public void setPropertyManually(String propertyName, Object value)

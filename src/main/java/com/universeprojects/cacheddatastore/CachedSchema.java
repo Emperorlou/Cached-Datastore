@@ -4,7 +4,7 @@ import java.util.List;
 
 public interface CachedSchema 
 {
-	public boolean isFieldUnindexed(String entityKind, String fieldName);
+	boolean isFieldUnindexed(String entityKind, String fieldName);
 	
-	public List<String> getKinds();
+	List<String> getKinds();
 }

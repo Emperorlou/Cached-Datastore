@@ -28,7 +28,6 @@ import com.google.appengine.tools.remoteapi.RemoteApiInstaller;
 import com.google.appengine.tools.remoteapi.RemoteApiOptions;
 
 
-@SuppressWarnings("unused")
 public class CachedDatastoreService
 {
 	final public static boolean statsTracking = false;

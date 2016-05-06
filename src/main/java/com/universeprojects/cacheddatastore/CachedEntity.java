@@ -5,10 +5,12 @@ import java.util.Map;
 
 import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.Key;
+import com.google.appengine.api.datastore.Text;
 
 public class CachedEntity implements Cloneable,Serializable {
 	private static final long serialVersionUID = 3034412029610092898L;
 	private Entity entity;
+	boolean unsavedChanges = false;
 	
 	public CachedEntity(Key key)
 	{
@@ -18,31 +20,37 @@ public class CachedEntity implements Cloneable,Serializable {
 	public CachedEntity(String kind)
 	{
 		this(new Entity(kind));
+		unsavedChanges = true;
 	}
 	
 	public CachedEntity(String kind, Key parent)
 	{
 		this(new Entity(kind, parent));
+		unsavedChanges = true;
 	}
 	
 	public CachedEntity(String kind, long id)
 	{
 		this(new Entity(kind, id));
+		unsavedChanges = true;
 	}
 	
 	public CachedEntity(String kind, long id, Key parent)
 	{
 		this(new Entity(kind, id, parent));
+		unsavedChanges = true;
 	}
 	
 	public CachedEntity(String kind, String keyName)
 	{
 		this(new Entity(kind, keyName));
+		unsavedChanges = true;
 	}
 	
 	public CachedEntity(String kind, String keyName, Key parent)
 	{
 		this(new Entity(kind, keyName, parent));
+		unsavedChanges = true;
 	}
 	
 	
@@ -132,7 +140,10 @@ public class CachedEntity implements Cloneable,Serializable {
 	
 	public Object getProperty(String propertyName)
 	{
-		return entity.getProperty(propertyName);
+		if (entity.getProperty(propertyName) instanceof Text)
+			return ((Text)entity.getProperty(propertyName)).getValue();
+		else
+			return entity.getProperty(propertyName);
 	}
 	
 	public boolean hasProperty(String propertyName)
@@ -173,6 +184,8 @@ public class CachedEntity implements Cloneable,Serializable {
 			entity.setUnindexedProperty(propertyName, value);
 		else
 			entity.setProperty(propertyName, value);
+		
+		unsavedChanges = true;
 	}
 	
 	public static CachedEntity wrap(Entity obj)
@@ -184,11 +197,20 @@ public class CachedEntity implements Cloneable,Serializable {
 	public void setPropertyManually(String propertyName, Object value)
 	{
 		entity.setProperty(propertyName, value);
+		
+		unsavedChanges = true;
 	}
 	
 	public void setUnindexedPropertyManually(String propertyName, Object value)
 	{
 		entity.setUnindexedProperty(propertyName, value);
+		
+		unsavedChanges = true;
+	}
+	
+	public boolean isUnsaved()
+	{
+		return unsavedChanges;
 	}
 	
 	

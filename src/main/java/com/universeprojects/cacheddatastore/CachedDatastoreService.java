@@ -14,9 +14,20 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import com.google.appengine.api.datastore.*;
+import com.google.appengine.api.datastore.Cursor;
+import com.google.appengine.api.datastore.DatastoreService;
+import com.google.appengine.api.datastore.DatastoreServiceFactory;
+import com.google.appengine.api.datastore.Entity;
+import com.google.appengine.api.datastore.EntityNotFoundException;
+import com.google.appengine.api.datastore.FetchOptions;
+import com.google.appengine.api.datastore.Key;
+import com.google.appengine.api.datastore.KeyRange;
+import com.google.appengine.api.datastore.PreparedQuery;
+import com.google.appengine.api.datastore.Query;
 import com.google.appengine.api.datastore.Query.Filter;
+import com.google.appengine.api.datastore.QueryResultList;
 import com.google.appengine.api.datastore.Transaction;
+import com.google.appengine.api.datastore.TransactionOptions;
 import com.google.appengine.api.memcache.Expiration;
 import com.google.appengine.api.memcache.InvalidValueException;
 import com.google.appengine.api.memcache.MemcacheService;
@@ -95,11 +106,10 @@ public class CachedDatastoreService
 			
 			if (options==null)
 				//noinspection deprecation
-				options = new RemoteApiOptions().server("playinitium.appspot.com", 443).credentials(System.getProperty("email"), System.getProperty("password"));
-			
+				//options = new RemoteApiOptions().server("playinitium.appspot.com", 443).credentials(System.getProperty("email"), System.getProperty("password"));
+				options = new RemoteApiOptions().server("playinitium.appspot.com", 443).useApplicationDefaultCredential();			
 			try
 			{
-		
 				RemoteApiInstaller installer = new RemoteApiInstaller();
 				installer.install(options);
 			}
@@ -320,6 +330,8 @@ public class CachedDatastoreService
 		
 		if (cacheEnabled && isTransactionActive()==false)
 			putEntityToMemcache(realEntity);
+		
+		entity.unsavedChanges = false;
 	}
 	
 	/**
@@ -439,8 +451,16 @@ public class CachedDatastoreService
 
 		List<Key> keys = new ArrayList<>();
 		QueryResultList<Entity> entities = pq.asQueryResultList(fo);
-		for(Entity e:entities)
+		
+		int count = entities.size();
+		if (count>limit)
+			count = limit;
+		
+		for(int i = 0; i<count; i++)
+		{
+			Entity e = entities.get(i);
 			keys.add(e.getKey());
+		}
 		
 		lastQuery_endCursor = entities.getCursor();
 		
@@ -467,8 +487,16 @@ public class CachedDatastoreService
 
 		List<Key> keys = new ArrayList<>();
 		QueryResultList<Entity> entities = pq.asQueryResultList(fo);
-		for(Entity e:entities)
+
+		int count = entities.size();
+		if (count>limit)
+			count = limit;
+		
+		for(int i = 0; i<count; i++)
+		{
+			Entity e = entities.get(i);
 			keys.add(e.getKey());
+		}
 		
 		lastQuery_endCursor = entities.getCursor();
 		
@@ -649,6 +677,7 @@ public class CachedDatastoreService
 
 	public class CDSIterable implements Iterable<CachedEntity>
 	{
+		boolean noCache = false;
 		Iterable<Entity> iterable;
 		public CDSIterable(Iterable<Entity> iterable)
 		{
@@ -656,11 +685,21 @@ public class CachedDatastoreService
 			this.iterable = iterable;
 		}
 
+		public CDSIterable(Iterable<Entity> iterable, boolean noCache)
+		{
+			//noinspection unchecked
+			this.iterable = iterable;
+			this.noCache = noCache;
+		}
+
 		public class CDSIterator implements Iterator<CachedEntity>
 		{
+			boolean noCache = false;
 			Iterator<Entity> iterator;
-			public CDSIterator(Iterator<Entity> iterator)
+			
+			public CDSIterator(Iterator<Entity> iterator, boolean noCache)
 			{
+				this.noCache = noCache;
 				this.iterator = iterator;
 			}
 			
@@ -672,7 +711,8 @@ public class CachedDatastoreService
 			@Override
 			public CachedEntity next() {
 				CachedEntity e = CachedEntity.wrap(iterator.next());
-				putEntityToMemcache(e.getEntity());
+				if (noCache==false)
+					putEntityToMemcache(e.getEntity());
 				return e;
 			}
 
@@ -685,7 +725,7 @@ public class CachedDatastoreService
 		
 		@Override
 		public Iterator<CachedEntity> iterator() {
-			return new CDSIterator(iterable.iterator());
+			return new CDSIterator(iterable.iterator(), noCache);
 		}
 		
 	}
@@ -696,6 +736,13 @@ public class CachedDatastoreService
 		prepareQuery(q);
 		
 		return new CDSIterable(pq.asIterable(FetchOptions.Builder.withChunkSize(500)));
+	}
+	
+	public Iterable<CachedEntity> fetchAsIterable(Query q, boolean noCache) {
+		
+		prepareQuery(q);
+		
+		return new CDSIterable(pq.asIterable(FetchOptions.Builder.withChunkSize(500)), noCache);
 	}
 	
 	public Iterable<CachedEntity> fetchAsIterable(Query q, int offset) {
@@ -1339,6 +1386,13 @@ public class CachedDatastoreService
 			if (success) return;
 		}
 	}
+	
+	
+	
+	
+	
+	
+	
 	
 	
 	

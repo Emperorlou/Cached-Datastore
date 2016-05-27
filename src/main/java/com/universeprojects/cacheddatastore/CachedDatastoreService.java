@@ -206,8 +206,6 @@ public class CachedDatastoreService
 			if (transactionallyFetchedEntities==null || transactionallyFetchedEntities.contains(entity.getKey())==false)
 				throw new EntityNotFetchedWithinTransactionException(entity);
 		
-		//TODO: Enter incomplete entities into the transaction!
-		
 		if (transactionallyChangedEntities==null)
 			transactionallyChangedEntities = new HashMap<>();
 		
@@ -1118,15 +1116,29 @@ public class CachedDatastoreService
 		return value;
 	}
 
+	public boolean flagActionLimiter(String actionName, int periodInSeconds, long maximumActions)
+	{
+		return flagActionLimiter(actionName, periodInSeconds, maximumActions, null);
+	}
+
+	
 	
 	/**
+	 * This handy method will use memcache to keep track of actions taken that should be done in moderation.
+	 * It is common to use this method to limit things like: 
+	 *  - The number of verification emails a particular IP is allowed to resend in a given time period
+	 *  - The number of signups a given IP is allowed to have in a given time period
+	 *  - The number of chat messages a given user is allowed to send in a given time period
+	 *  These are just exmaples.
+	 * 
+	 * Returns TRUE if the action has reached it's limit and should be limited. 
 	 * 
 	 * @param actionName
 	 * @param periodInSeconds
 	 * @param maximumActions
-	 * @return
+	 * @return True = the action must now be limited. False = The action should be allowed to continue.
 	 */
-	public boolean flagActionLimiter(String actionName, int periodInSeconds, long maximumActions)
+	public boolean flagActionLimiter(String actionName, int periodInSeconds, long maximumActions, Integer penaltyDuration)
 	{
 		Long counter = (Long)mc.get("actionLimiter-"+actionName);
 		if (counter==null)
@@ -1139,10 +1151,15 @@ public class CachedDatastoreService
 			counter = mc.increment("actionLimiter-"+actionName, -1l);
 		}
 		
-		if (counter>0)
+		if (counter==null || counter>0)
 			return false;
 		else
+		{
+			if (penaltyDuration!=null)
+				mc.put("actionLimiter-"+actionName, 0L, Expiration.byDeltaSeconds(penaltyDuration));
+			
 			return true;
+		}
 	}
 	
 	public boolean isActionLimited(String actionName)
@@ -1342,7 +1359,13 @@ public class CachedDatastoreService
 	
 	
 	@SuppressWarnings("unchecked")
-	public void addToSet_MC(String key, Object objectToAdd)
+	/**
+	 * 
+	 * @param key
+	 * @param objectToAdd
+	 * @return True if the objectToAdd was in fact added to the set and was NOT already there
+	 */
+	public boolean addToSet_MC(String key, Object objectToAdd)
 	{
 		while(true)
 		{
@@ -1353,37 +1376,56 @@ public class CachedDatastoreService
 			else
 				set = (Set<Object>)identifiable.getValue();
 
+			// If this object is already in the set, then don't bother adding it and just get out
+			if (set.contains(objectToAdd))
+				return false;
+			
 			set.add(objectToAdd);
 			
 			if (identifiable==null)
 			{
 				boolean success = mc.put(key, set, null, SetPolicy.ADD_ONLY_IF_NOT_PRESENT);
-				if (success) return;
+				if (success) return true;
 			}
 			else
 			{
 				boolean success = mc.putIfUntouched(key, identifiable, set);
-				if (success) return;
+				if (success) return true;
 			}
 		}
 	}
+	public Set<Object> getSet_MC(String key)
+	{
+		Set<Object> set = (Set<Object>)mc.get(key);
+		return set;
+	}
 	
 	@SuppressWarnings("unchecked")
-	public void deleteFromSet_MC(String key, Object objectToDelete)
+	/**
+	 * 
+	 * @param key
+	 * @param objectToDelete
+	 * @return True if the objectToDelete actually needed to be deleted
+	 */
+	public boolean deleteFromSet_MC(String key, Object objectToDelete)
 	{
 		while(true)
 		{
 			Set<Object> set;
 			IdentifiableValue identifiable = mc.getIdentifiable(key);
 			if (identifiable==null)
-				return;
+				return false;
 			else
 				set = (Set<Object>)identifiable.getValue();
 
+			// If this object is already deleted from the set, then don't bother and just get out
+			if (set.contains(objectToDelete)==false)
+				return false;
+			
 			set.remove(objectToDelete);
 			
 			boolean success = mc.putIfUntouched(key, identifiable, set);
-			if (success) return;
+			if (success) return true;
 		}
 	}
 	

@@ -3,6 +3,8 @@ package com.universeprojects.cacheddatastore;
 import java.util.List;
 
 import com.google.appengine.api.datastore.Cursor;
+import com.google.appengine.api.datastore.Key;
+import com.google.appengine.api.datastore.Query;
 import com.google.appengine.api.datastore.Query.CompositeFilterOperator;
 import com.google.appengine.api.datastore.Query.Filter;
 import com.google.appengine.api.datastore.Query.FilterOperator;
@@ -45,6 +47,21 @@ public class QueryHelper
 		Filter filter = CompositeFilterOperator.and(new FilterPredicate(fieldName1, operator1, value1), new FilterPredicate(fieldName2, operator2, value2));
 		
 		return ds.fetchAsList(kind, filter, limit, cursor);
+	}
+	
+	
+	/**
+	 * This performs an ancestor query to fetch all children (within a limit) 
+	 * @param ds
+	 * @param parent
+	 * @param limit
+	 * @return
+	 */
+	public static List<CachedEntity> fetchChildren(CachedDatastoreService ds, Key parent, int limit)
+	{
+		Query q = new Query();
+		q.setAncestor(parent);
+		return ds.fetchAsList(q, limit);
 	}
 
 

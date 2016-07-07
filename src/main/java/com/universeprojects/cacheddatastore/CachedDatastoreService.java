@@ -377,6 +377,21 @@ public class CachedDatastoreService
 		}
 	}
 	
+	public List<CachedEntity> refetch(List<CachedEntity> entitiesToRefetchFromDB) 
+	{
+		if (entitiesToRefetchFromDB==null) return null;
+		
+		List<Key> keysToRefetchFromDB = new ArrayList<Key>();
+		for(CachedEntity e:entitiesToRefetchFromDB)
+		{
+			if (e.getKey().isComplete()==false)
+				throw new IllegalArgumentException("One of the entities you are attempting to refetch hasn't even been saved to the DB yet as the key is incomplete. Key="+e.getKey());
+			keysToRefetchFromDB.add(e.getKey());
+		}
+		
+		return fetchEntitiesFromKeys(keysToRefetchFromDB);
+	}
+	
 	public CachedEntity get(Key entityKey) throws EntityNotFoundException
 	{
 		CachedEntity result;

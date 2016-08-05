@@ -6,7 +6,7 @@ public interface CachedSchema
 {
 	boolean isFieldUnindexed(String entityKind, String fieldName);
 	
-	String getFieldType(String entityKind, String fieldName);
+	String getFieldTypeName(String entityKind, String fieldName);
 	
 	List<String> getKinds();
 }

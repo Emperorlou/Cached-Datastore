@@ -173,7 +173,7 @@ public class CachedEntity implements Cloneable,Serializable {
 		{
 			unindexed = schema.isFieldUnindexed(entity.getKind(), propertyName);
 
-			String fieldType = schema.getFieldType(entity.getKind(), propertyName);
+			String fieldType = schema.getFieldTypeName(entity.getKind(), propertyName);
 			// Here is a little nice thing to convert a string to a Text if that is the setting in the schema field
 			if ("Text".equals(fieldType) && value instanceof String)
 				value = new Text((String)value);

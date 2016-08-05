@@ -68,6 +68,8 @@ public class CachedDatastoreService
 	PreparedQuery pq = null;
 	Cursor lastQuery_endCursor = null;
 	
+	private static RemoteApiOptions options = null;
+	private static boolean disableRemoteAPI = false;
 	
 
 	
@@ -92,8 +94,6 @@ public class CachedDatastoreService
 	
 
 	
-	private static RemoteApiOptions options = null;
-	private static boolean disableRemoteAPI = false;
 
 	public static void disableRemoteAPI() {
 		disableRemoteAPI = true;
@@ -101,7 +101,7 @@ public class CachedDatastoreService
 	
 	public CachedDatastoreService()
 	{
-		if (disableRemoteAPI==false && SystemProperty.environment.value() != SystemProperty.Environment.Value.Production)
+		if (disableRemoteAPI==false && Boolean.TRUE.equals(Boolean.parseBoolean(System.getProperty("disableRemoteAPI")))==false && SystemProperty.environment.value() != SystemProperty.Environment.Value.Production)
 		{
 			
 			if (options==null)

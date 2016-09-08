@@ -5,12 +5,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -41,6 +43,8 @@ import com.google.appengine.tools.remoteapi.RemoteApiOptions;
 
 public class CachedDatastoreService
 {
+	private static ConcurrentHashMap<String,InstanceCacheWrapper> instanceCache = new ConcurrentHashMap<String,InstanceCacheWrapper>();
+	
 	final public static boolean statsTracking = false;
 	final public static String MC_GETS = "Stats_MC_GETS";
 	final public static String DS_GETS = "Stats_DS_GETS";
@@ -129,6 +133,11 @@ public class CachedDatastoreService
 		mc = getMC();
 	}
 	
+	public ConcurrentHashMap<String,InstanceCacheWrapper> getInstanceCache()
+	{
+		return instanceCache;
+	}
+	
 	public MemcacheService getMC()
 	{
 		if (mc!=null)
@@ -168,6 +177,26 @@ public class CachedDatastoreService
 		return queryModelCacheEnabled;
 	}
 	
+	
+	private void putEntityToInstanceCache(Entity entity, Long expiryMs)
+	{
+		Date expiry = null;
+		if (expiryMs!=null)
+			expiry = new Date(System.currentTimeMillis()+expiryMs);
+		instanceCache.put(mcPrefix+entity.getKey().toString(), new InstanceCacheWrapper(entity, expiry));
+	}
+	
+	protected void putEntitiesToInstanceCache(Iterable<Entity> entities, Long expiryMs)
+	{
+		Date expiry = null;
+		if (expiryMs!=null)
+			expiry = new Date(System.currentTimeMillis()+expiryMs);
+		
+		Map<String, InstanceCacheWrapper> map = new HashMap<>();
+		for(Entity entity:entities)
+			map.put(mcPrefix+entity.getKey().toString(), new InstanceCacheWrapper(entity, expiry));
+		instanceCache.putAll(map);
+	}
 	
 	private void putEntityToMemcache(Entity entity)
 	{
@@ -298,7 +327,51 @@ public class CachedDatastoreService
 		
 		return false;
 	}
-	
+
+	public void put(Collection<CachedEntity> entities)
+	{
+		//TODO: Make this MUCH more efficient with batch puts
+		
+		for(CachedEntity e:entities)
+			put(e);
+		
+//		if (statsTracking)
+//		{
+//			ArrayList<String> entityStatKeys = new ArrayList<String>();
+//			for(CachedEntity e:entities)
+//				entityStatKeys.add("Stats_"+e.getKind());
+//			incrementStats(entityStatKeys);
+//		}		
+//		
+//		for(CachedEntity entity:entities)
+//		{
+//			Entity realEntity = entity.getEntity();
+//			if (cacheEnabled && isTransactionActive())
+//			{
+//				// If this is a new entity, then we need to add the entity to the transaction first
+//				if (entity.getKey().isComplete()==false)
+//				{
+//					db.put(realEntity);
+//					addEntityToTransaction(realEntity.getKey());
+//					markEntityChanged(realEntity);
+//				}
+//				else
+//				{
+//					markEntityChanged(realEntity);
+//					db.put(realEntity);
+//				}
+//					
+//			}
+//			else
+//				db.put(realEntity);
+//	
+//			
+//			if (cacheEnabled && isTransactionActive()==false)
+//				putEntityToMemcache(realEntity);
+//			
+//			entity.unsavedChanges = false;
+//		}		
+	}
 	
 	public void put(CachedEntity entity)
 	{
@@ -390,6 +463,21 @@ public class CachedDatastoreService
 		}
 		
 		return fetchEntitiesFromKeys(keysToRefetchFromDB);
+	}
+	
+	/**
+	 * This simply gets a value from the instance cache, but only if it's not expired.
+	 * 
+	 * @param key
+	 * @return
+	 */
+	public InstanceCacheWrapper getFromInstanceCache(String key)
+	{
+		InstanceCacheWrapper wrapper = instanceCache.get(key);
+		if (wrapper!=null && wrapper.expiry.getTime()>System.currentTimeMillis())
+			return wrapper;
+		
+		return null;
 	}
 	
 	public CachedEntity get(Key entityKey) throws EntityNotFoundException
@@ -846,6 +934,21 @@ public class CachedDatastoreService
 		return lastQuery_endCursor;
 	}
 	
+	
+	protected void incrementStats(List<String> statKeys)
+	{
+		Map<String, Integer> counts = new HashMap<String, Integer>();
+		for(String statKey:statKeys)
+		{
+			Integer currentCount = counts.get(statKey);
+			if (currentCount==null) currentCount = 0;
+			currentCount++;
+			counts.put(statKey, currentCount);
+		}
+		
+		for(String statKey:counts.keySet())
+			incrementStat(statKey, counts.get(statKey));
+	}
 	
 	
 	
@@ -1442,6 +1545,15 @@ public class CachedDatastoreService
 			boolean success = mc.putIfUntouched(key, identifiable, set);
 			if (success) return true;
 		}
+	}
+
+	public void putToInstanceCache(String mcKey, Object object, Long expiryMs)
+	{
+		Date expiry = null;
+		if (expiryMs!=null)
+			expiry = new Date(System.currentTimeMillis()+expiryMs);
+
+		instanceCache.put(mcKey, new InstanceCacheWrapper(object, expiry));
 	}
 	
 	

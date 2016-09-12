@@ -328,6 +328,14 @@ public class CachedDatastoreService
 		return false;
 	}
 
+	public void put(CachedEntity...entities)
+	{
+		//TODO: Make this MUCH more efficient with batch puts
+		
+		for(CachedEntity e:entities)
+			put(e);
+	}
+	
 	public void put(Collection<CachedEntity> entities)
 	{
 		//TODO: Make this MUCH more efficient with batch puts

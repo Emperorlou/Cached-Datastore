@@ -624,7 +624,7 @@ public class CachedDatastoreService
 		return fetchEntitiesFromKeys(Arrays.asList(keys));
 	}
 	
-	public List<CachedEntity> fetchEntitiesFromKeys(List<Key> keys)
+	public List<CachedEntity> fetchEntitiesFromKeys(Iterable<Key> keys)
 	{
 		//////////
 		// First try to fetch all entities from memcache...

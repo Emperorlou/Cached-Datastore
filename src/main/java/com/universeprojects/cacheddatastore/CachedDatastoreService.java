@@ -103,9 +103,18 @@ public class CachedDatastoreService
 		disableRemoteAPI = true;
 	}
 	
-	public CachedDatastoreService()
+	public static boolean isUsingRemoteAPI()
 	{
 		if (disableRemoteAPI==false && Boolean.TRUE.equals(Boolean.parseBoolean(System.getProperty("disableRemoteAPI")))==false && SystemProperty.environment.value() != SystemProperty.Environment.Value.Production)
+			return true;
+		else
+			return false;
+					
+	}
+	
+	public CachedDatastoreService()
+	{
+		if (isUsingRemoteAPI())
 		{
 			
 			if (options==null)
@@ -143,7 +152,7 @@ public class CachedDatastoreService
 		if (mc!=null)
 			return mc;
 		
-		if (disableRemoteAPI==false && SystemProperty.environment.value() != SystemProperty.Environment.Value.Production)
+		if (isUsingRemoteAPI())
 		{
 			try
 			{
@@ -488,6 +497,8 @@ public class CachedDatastoreService
 		return null;
 	}
 	
+
+	
 	public CachedEntity get(Key entityKey) throws EntityNotFoundException
 	{
 		CachedEntity result;
@@ -527,12 +538,31 @@ public class CachedDatastoreService
 		return result;
 	}
 
+	public List<CachedEntity> get(Iterable<Key> keys)
+	{
+		return fetchEntitiesFromKeys(keys);
+	}
+	
+	public List<CachedEntity> get(Key...keys)
+	{
+		return fetchEntitiesFromKeys(keys);
+	}
+	
 	private void addEntityToTransaction(Key entityKey) {
 		if (isTransactionActive())
 		{
 			if (transactionallyFetchedEntities==null)
 				transactionallyFetchedEntities = new HashSet<>();
 			transactionallyFetchedEntities.add(entityKey);
+		}
+	}
+	
+	private void addEntityToTransaction(List<Key> entityKeys) {
+		if (isTransactionActive())
+		{
+			if (transactionallyFetchedEntities==null)
+				transactionallyFetchedEntities = new HashSet<>();
+			transactionallyFetchedEntities.addAll(entityKeys);
 		}
 	}
 	
@@ -616,6 +646,13 @@ public class CachedDatastoreService
 		return keys;
 	}
 	
+	/**
+	 * Note: This method will allow null keys to be passed in and will
+	 * include the null entries in the return as well. 
+	 * 
+	 * @param keys
+	 * @return
+	 */
 	public List<CachedEntity> fetchEntitiesFromKeys(Key...keys)
 	{
 		if (keys==null || keys.length==0)
@@ -624,6 +661,16 @@ public class CachedDatastoreService
 		return fetchEntitiesFromKeys(Arrays.asList(keys));
 	}
 	
+	/**
+	 * Note: This method will allow null keys to be passed in and will
+	 * include the null entries in the return as well. 
+	 * 
+	 * Deprecated: This method is going to be made private. Please use .get(Iterable<Key>) instead.
+	 * 
+	 * @param keys
+	 * @return
+	 */
+	@Deprecated
 	public List<CachedEntity> fetchEntitiesFromKeys(Iterable<Key> keys)
 	{
 		//////////
@@ -635,7 +682,8 @@ public class CachedDatastoreService
 		if (cacheEnabled && isTransactionActive()==false)
 		{
 			for(Key key:keys)
-				entityKeyStrings.add(mcPrefix+key.toString());
+				if (key!=null)
+					entityKeyStrings.add(mcPrefix+key.toString());
 			entitiesFromMC = mc.getAll(entityKeyStrings);
 		}
 		
@@ -647,6 +695,8 @@ public class CachedDatastoreService
 		List<Key> keysThatStillNeedFetching = new ArrayList<>();
 		for(Key key:keys)
 		{
+			if (key==null) continue;
+			
 			String requiredKeyString = mcPrefix+key.toString();
 			if (entitiesFromMC==null || entitiesFromMC.containsKey(requiredKeyString)==false)
 			{
@@ -663,12 +713,7 @@ public class CachedDatastoreService
 			
 			// Here we're going to keep track of the entities that were fetched while inside of the transaction. We will then throw 
 			// later if we try to put an entity that wasn't fetched within the transaction.
-			if (isTransactionActive())
-			{
-				if (transactionallyFetchedEntities==null)
-					transactionallyFetchedEntities = new HashSet<>();
-				transactionallyFetchedEntities.addAll(keysThatStillNeedFetching);
-			}
+			addEntityToTransaction(keysThatStillNeedFetching);
 			
 			if (entitiesFromDB!=null) {
 				incrementStat(QUERYKEYCACHE_DB_ENTITIES, entitiesFromDB.size());
@@ -683,6 +728,11 @@ public class CachedDatastoreService
 		List<CachedEntity> result = new ArrayList<>();
 		for(Key key:keys)
 		{
+			if (key==null) 
+			{
+				result.add(null);
+				continue;
+			}
 			CachedEntity mcEntity = null;
 			CachedEntity dbEntity = null;
 			if (entitiesFromMC!=null && entitiesFromMC.isEmpty()==false)

@@ -1,10 +1,11 @@
 /.gradle/
 /.idea/
 /build/
-/war/
 /bin/
 
 .settings
 *.iml
 /CachedDatastore/bin
 /CachedDatastore/
+/war/WEB-INF/classes
+/war/WEB-INF/lib

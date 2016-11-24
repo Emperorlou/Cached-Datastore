@@ -9,6 +9,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -43,6 +44,7 @@ import com.google.appengine.tools.remoteapi.RemoteApiOptions;
 
 public class CachedDatastoreService
 {
+	private Logger log = Logger.getLogger(this.getClass().toString());	
 	private static ConcurrentHashMap<String,InstanceCacheWrapper> instanceCache = new ConcurrentHashMap<String,InstanceCacheWrapper>();
 	
 	final public static boolean statsTracking = false;
@@ -61,6 +63,9 @@ public class CachedDatastoreService
 	boolean cacheEnabled = true;
 	boolean queryModelCacheEnabled = false;
 	
+	Set<CachedEntity> entitiesToBulkPut = new HashSet<CachedEntity>();
+	boolean bulkPutMode = false;
+	
 	DatastoreService db = null;
 	MemcacheService mc = null;
 	
@@ -75,6 +80,8 @@ public class CachedDatastoreService
 	private static RemoteApiOptions options = null;
 	private static boolean disableRemoteAPI = false;
 	
+	Map<String,List<Long>> preallocatedIds = new HashMap<String, List<Long>>();
+	private Map<String, Integer> autoPreallocationCount = new HashMap<String, Integer>();
 
 	
 	
@@ -95,6 +102,41 @@ public class CachedDatastoreService
 	}
 	
 	
+	/**
+	 * Copies all the field values from one entity over to another making 
+	 * sure that the field values on both entities are exactly the same with no extra fields left over.
+	 * 
+	 * @param characterToDie
+	 * @param characterToDieFinal
+	 */
+	public static void copyFieldValues(CachedEntity from, CachedEntity to)
+	{
+		// First, remove all field values from "to"
+		for(String key:to.getProperties().keySet())
+			to.removeProperty(key);
+		
+		// Now copy all the properties from "from", to "to"
+		for(String key:from.getProperties().keySet())
+			to.setProperty(key, from.getProperty(key));
+	}
+	
+	/**
+	 * Copies all the field values from one entity over to another making 
+	 * sure that the field values on both entities are exactly the same with no extra fields left over.
+	 * 
+	 * @param characterToDie
+	 * @param characterToDieFinal
+	 */
+	public static void copyFieldValues(Entity from, Entity to)
+	{
+		// First, remove all field values from "to"
+		for(String key:to.getProperties().keySet())
+			to.removeProperty(key);
+		
+		// Now copy all the properties from "from", to "to"
+		for(String key:from.getProperties().keySet())
+			to.setProperty(key, from.getProperty(key));
+	}
 	
 
 	
@@ -279,14 +321,106 @@ public class CachedDatastoreService
 			transactionallyDeletedEntities.clear();
 	}
 	
+	/**
+	 * When you call this method, the CachedDatastoreService will enter into a mode that 
+	 * will cause calls to .put() to not actually put the entities to the database until
+	 * commitBulkPut() gets called, where it will do a bulk put of all entities to be saved
+	 * all at once instead.
+	 */
+	public void beginBulkWriteMode()
+	{
+		if (isTransactionActive())
+			throw new IllegalStateException("Cannot use bulk-put-mode while a transaction is active.");
+		
+		bulkPutMode = true;
+	}
+	
+	public int getBulkPutEntityCount()
+	{
+		return entitiesToBulkPut.size();
+	}
+	
+	public void commitBulkWrite()
+	{
+		if (isTransactionActive())
+			throw new IllegalStateException("Cannot use bulk-put-mode while a transaction is active.");
+		
+		 // Look for any incomplete keys and add them to the pile we need to complete before proceeding
+		Map<String, List<CachedEntity>> incompleteKeyEntities = new HashMap<String, List<CachedEntity>>();
+		if (entitiesToBulkPut.isEmpty()==false)
+			for(CachedEntity e:entitiesToBulkPut)
+				if (e.getKey().isComplete()==false)
+				{
+					List<CachedEntity> list = incompleteKeyEntities.get(e.getKind());
+					if (list==null)
+					{
+						list = new ArrayList<CachedEntity>();
+						incompleteKeyEntities.put(e.getKind(), list);
+					}
+					list.add(e);
+				}
+		
+		if (incompleteKeyEntities.isEmpty()==false)
+		{
+			// Now that we found incomplete keys, we will complete them but keep track of the original keys
+			Map<Key, Key> oldKeyToNewKeyMap = new HashMap<Key, Key>();
+			for(String kind:incompleteKeyEntities.keySet())
+			{
+				List<CachedEntity> incompleteEntitiesList = incompleteKeyEntities.get(kind);
+				KeyRange range = allocateIds(kind, incompleteEntitiesList.size());
+				Iterator<Key> iterator = range.iterator();
+				int i = 0; 
+				while(iterator.hasNext())
+				{
+					CachedEntity incompleteEntity = incompleteEntitiesList.get(i);
+					Key newId = iterator.next();
+					
+					Key oldKey = incompleteEntity.getKey();
+					incompleteEntity.setId(newId.getId());
+					Key newKey = incompleteEntity.getKey();
+					oldKeyToNewKeyMap.put(oldKey, newKey);
+					i++;
+				}
+			}
+			
+			// Keys have been replaced, now we have to look at EVERYTHING we're about to put to the database and 
+			// replace all the old keys with the new keys
+			Set<Key> keySet = oldKeyToNewKeyMap.keySet();
+			for(Key oldKey:keySet)
+			{
+				Key newKey = oldKeyToNewKeyMap.get(oldKey);
+				for(CachedEntity e:entitiesToBulkPut)
+				{
+					e.updateStoredKey(oldKey, newKey);
+				}
+			}
+			
+			Iterator<CachedEntity> iterator = entitiesToBulkPut.iterator();
+			for(int i = 0; i<15 && i<entitiesToBulkPut.size(); i++)
+				log.warning("Sample: "+iterator.next());
+		}
+		
+		
+		bulkPutMode = false;
+		if (entitiesToBulkPut.isEmpty()==false)
+			put(entitiesToBulkPut);
+		
+		entitiesToBulkPut.clear();
+	}
+
 
 	public void beginTransaction()
 	{
+		if (bulkPutMode==true)
+			throw new IllegalStateException("Cannot use a transaction while the system is in bulk put mode.");
 		beginTransaction(false);
 	}
 	
 	public void beginTransaction(boolean enforceEntityFetchWithinTransaction)
 	{
+		if (bulkPutMode==true)
+			throw new IllegalStateException("Cannot use a transaction while the system is in bulk put mode.");
+		
 		this.enforceEntityFetchWithinTransaction = enforceEntityFetchWithinTransaction;
 		db.beginTransaction(TransactionOptions.Builder.withXG(true));
 	}
@@ -339,59 +473,67 @@ public class CachedDatastoreService
 
 	public void put(CachedEntity...entities)
 	{
-		//TODO: Make this MUCH more efficient with batch puts
-		
-		for(CachedEntity e:entities)
-			put(e);
+		put(Arrays.asList(entities));
 	}
 	
 	public void put(Collection<CachedEntity> entities)
 	{
-		//TODO: Make this MUCH more efficient with batch puts
+		if (bulkPutMode)
+		{
+			entitiesToBulkPut.removeAll(entities);
+			entitiesToBulkPut.addAll(entities);
+			return;
+		}
 		
-		for(CachedEntity e:entities)
-			put(e);
+		if (statsTracking)
+		{
+			//TODO: THIS DEFINITELY NEEDS TO BE WAY MORE EFFICIENT, CRIPES
+			ArrayList<String> entityStatKeys = new ArrayList<String>();
+			for(CachedEntity e:entities)
+				entityStatKeys.add("Stats_"+e.getKind());
+			incrementStats(entityStatKeys);
+		}		
+
+		// Go through looking for keys that are incomplete and handle them specially
+		List<Entity> entitiesToPut = new ArrayList<Entity>();
+		for(CachedEntity entity:entities)
+		{
+			Entity realEntity = entity.getEntity();
+			entitiesToPut.add(realEntity);
+			
+			if (cacheEnabled && isTransactionActive())
+			{
+				// If this is a new entity, then we need to add the entity to the transaction first
+				if (entity.getKey().isComplete()==false)
+				{
+					addEntityToTransaction(realEntity.getKey());
+					markEntityChanged(realEntity);
+				}
+				else
+				{
+					markEntityChanged(realEntity);
+				}
+					
+			}
+			
+			entity.unsavedChanges = false;
+		}
 		
-//		if (statsTracking)
-//		{
-//			ArrayList<String> entityStatKeys = new ArrayList<String>();
-//			for(CachedEntity e:entities)
-//				entityStatKeys.add("Stats_"+e.getKind());
-//			incrementStats(entityStatKeys);
-//		}		
-//		
-//		for(CachedEntity entity:entities)
-//		{
-//			Entity realEntity = entity.getEntity();
-//			if (cacheEnabled && isTransactionActive())
-//			{
-//				// If this is a new entity, then we need to add the entity to the transaction first
-//				if (entity.getKey().isComplete()==false)
-//				{
-//					db.put(realEntity);
-//					addEntityToTransaction(realEntity.getKey());
-//					markEntityChanged(realEntity);
-//				}
-//				else
-//				{
-//					markEntityChanged(realEntity);
-//					db.put(realEntity);
-//				}
-//					
-//			}
-//			else
-//				db.put(realEntity);
-//	
-//			
-//			if (cacheEnabled && isTransactionActive()==false)
-//				putEntityToMemcache(realEntity);
-//			
-//			entity.unsavedChanges = false;
-//		}		
+		db.put(entitiesToPut);
+		
+		if (cacheEnabled && isTransactionActive()==false)
+			putEntitiesToMemcache(entitiesToPut);
 	}
 	
 	public void put(CachedEntity entity)
 	{
+		if (bulkPutMode)
+		{
+			entitiesToBulkPut.remove(entity);
+			entitiesToBulkPut.add(entity);
+			return;
+		}
+		
 		if (statsTracking)
 			incrementStat("Stats_"+entity.getKey().getKind());
 		
@@ -543,6 +685,17 @@ public class CachedDatastoreService
 		return fetchEntitiesFromKeys(keys);
 	}
 	
+	public List<CachedEntity> get(Collection<Key>...keys)
+	{
+		List<Key> combinedKeys = new ArrayList<Key>();
+		
+		if (keys.length>0)
+			for(Collection<Key> k:keys)
+				combinedKeys.addAll(k);
+		
+		return fetchEntitiesFromKeys(combinedKeys);
+	}
+	
 	public List<CachedEntity> get(Key...keys)
 	{
 		return fetchEntitiesFromKeys(keys);
@@ -578,11 +731,7 @@ public class CachedDatastoreService
 		
 		prepareQuery(q);
 
-		int chunkSize = 20;
-		if (limit>500)
-			chunkSize=100;
-		if (limit>=1000)
-			chunkSize=500;
+		int chunkSize=500;
 		FetchOptions fo = FetchOptions.Builder.withLimit(limit).chunkSize(chunkSize);
 		if (startCursor!=null)
 			fo = fo.startCursor(startCursor);
@@ -616,11 +765,7 @@ public class CachedDatastoreService
 		
 		prepareQuery(q);
 
-		int chunkSize = 20;
-		if (limit>500)
-			chunkSize=100;
-		if (limit>=1000)
-			chunkSize=500;
+		int chunkSize = 500;
 		FetchOptions fo = FetchOptions.Builder.withLimit(limit).chunkSize(chunkSize).offset(offset);
 		
 
@@ -1613,8 +1758,45 @@ public class CachedDatastoreService
 
 		instanceCache.put(mcKey, new InstanceCacheWrapper(object, expiry));
 	}
+
 	
+	public void preallocateIdsFor(String kind, int count)
+	{
+		KeyRange range = db.allocateIds(kind, count);
+		List<Long> idList = preallocatedIds.get(kind);
+		if (idList==null)
+		{
+			idList = new ArrayList<Long>();
+			preallocatedIds.put(kind, idList);
+		}
+		
+		Iterator<Key> iterator = range.iterator();
+		while(iterator.hasNext())
+			idList.add(iterator.next().getId());
+	}
 	
+	public long getPreallocatedIdFor(String kind)
+	{
+		List<Long> idList = preallocatedIds.get(kind);
+
+		if (idList==null || idList.isEmpty())
+		{
+			Integer autoAllocate = autoPreallocationCount.get(kind);
+			if (autoAllocate==null)
+				autoAllocate = 1;
+			
+			preallocateIdsFor(kind, autoAllocate);
+		}
+		
+		Long id = idList.get(idList.size()-1);
+		idList.remove(idList.size()-1);
+		return id;
+	}
+	
+	public void setAutoPreallocationCount(String kind, int count)
+	{
+		autoPreallocationCount.put(kind, count);
+	}
 	
 	
 	

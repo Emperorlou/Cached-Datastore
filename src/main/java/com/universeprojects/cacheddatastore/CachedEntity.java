@@ -1,13 +1,20 @@
 package com.universeprojects.cacheddatastore;
 
 import java.io.Serializable;
+import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
+
+import org.mortbay.log.Log;
 
 import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.Key;
 import com.google.appengine.api.datastore.Text;
+import com.google.appengine.api.log.LogService.LogLevel;
 
 public class CachedEntity implements Cloneable,Serializable {
+	private static Logger log = Logger.getLogger(CachedEntity.class.toString());
+	
 	private static final long serialVersionUID = 3034412029610092898L;
 	private Entity entity;
 	boolean unsavedChanges = false;
@@ -17,9 +24,25 @@ public class CachedEntity implements Cloneable,Serializable {
 		this(new Entity(key));
 	}
 	
+	/**
+	 * This will generate the entity using the by-ID method, but 
+	 * it will use preallocated IDs instead of waiting to finish the
+	 * key on the first .put().
+	 * 
+	 * @param kind
+	 * @param ds
+	 */
+	public CachedEntity(String kind, CachedDatastoreService ds)
+	{
+		this(new Entity(kind, ds.getPreallocatedIdFor(kind)));
+
+		unsavedChanges = true;
+	}
+	
 	public CachedEntity(String kind)
 	{
 		this(new Entity(kind));
+		
 		unsavedChanges = true;
 	}
 	
@@ -78,6 +101,60 @@ public class CachedEntity implements Cloneable,Serializable {
 	public CachedEntity clone()
 	{
 		return new CachedEntity(entity.clone());
+	}
+	
+	/**
+	 * If this entity has an incomplete key, this
+	 * method can be used to set the ID on the entity.
+	 * 
+	 * @param id
+	 */
+	protected void setId(long id)
+	{
+		if (entity.getKey().isComplete())
+			throw new IllegalStateException("You cannot set an ID for an entity that already has a complete key.");
+		
+		// First create the new entity with the new ID
+		Entity newEntity = new Entity(entity.getKind(), id);
+		CachedDatastoreService.copyFieldValues(entity, newEntity);
+		
+		entity = newEntity;
+	}
+	
+	/**
+	 * This method will go through all field values stored in the entity
+	 * looking for references to the original key and replacing it with 
+	 * the new key. 
+	 * 
+	 * @param newKey
+	 */
+	protected void updateStoredKey(Key originalKey, Key newKey)
+	{
+		for(String field:this.getProperties().keySet())
+		{
+			Object value = this.getProperty(field);
+			if (value instanceof Key)
+			{
+				if (originalKey == value)
+				{
+					this.setProperty(field, newKey);
+				
+					log.warning(this.getKey()+"."+field+" was "+originalKey+" and is now "+newKey);
+				}
+			}
+			else if (value instanceof List)
+			{
+				List list = (List)value;
+				for(int i = 0; i<list.size(); i++)
+					if (originalKey == list.get(i))
+					{
+						list.set(i, newKey);
+						
+						log.warning(this.getKey()+"."+field+"["+i+"] was "+originalKey+" and is now "+newKey);
+					}
+			}
+		}
+		
 	}
 	
 	public boolean equals(Object object)

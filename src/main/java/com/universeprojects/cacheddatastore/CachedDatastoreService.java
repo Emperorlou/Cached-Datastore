@@ -24,6 +24,7 @@ import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.EntityNotFoundException;
 import com.google.appengine.api.datastore.FetchOptions;
 import com.google.appengine.api.datastore.Key;
+import com.google.appengine.api.datastore.KeyFactory;
 import com.google.appengine.api.datastore.KeyRange;
 import com.google.appengine.api.datastore.PreparedQuery;
 import com.google.appengine.api.datastore.Query;
@@ -162,7 +163,7 @@ public class CachedDatastoreService
 			if (options==null)
 				//noinspection deprecation
 				//options = new RemoteApiOptions().server("playinitium.appspot.com", 443).credentials(System.getProperty("email"), System.getProperty("password"));
-				options = new RemoteApiOptions().server("playinitium.appspot.com", 443).useApplicationDefaultCredential();			
+				options = new RemoteApiOptions().server(System.getProperty("remoteAPIServer"), 443).useApplicationDefaultCredential();			
 			try
 			{
 				RemoteApiInstaller installer = new RemoteApiInstaller();
@@ -576,6 +577,14 @@ public class CachedDatastoreService
 		throw new RuntimeException("Method not implemented yet.");
 	}
 
+	public CachedEntity getIfExists(String kind, Long id)
+	{
+		if (id==null)
+			return null;
+		
+		return getIfExists(KeyFactory.createKey(kind, id));
+	}
+	
 	public CachedEntity getIfExists(Key entityKey)
 	{
 		if (entityKey==null)

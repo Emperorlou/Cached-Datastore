@@ -65,6 +65,7 @@ public class CachedDatastoreService
 	boolean queryModelCacheEnabled = false;
 	
 	Set<CachedEntity> entitiesToBulkPut = new HashSet<CachedEntity>();
+	Set<Key> entitiesToBulkDelete = new HashSet<Key>();
 	boolean bulkPutMode = false;
 	
 	DatastoreService db = null;
@@ -396,13 +397,12 @@ public class CachedDatastoreService
 				}
 			}
 			
-			Iterator<CachedEntity> iterator = entitiesToBulkPut.iterator();
-			for(int i = 0; i<15 && i<entitiesToBulkPut.size(); i++)
-				log.warning("Sample: "+iterator.next());
 		}
 		
 		
 		bulkPutMode = false;
+		if (entitiesToBulkDelete.isEmpty()==false)
+			delete(entitiesToBulkDelete);
 		if (entitiesToBulkPut.isEmpty()==false)
 			put(entitiesToBulkPut);
 		
@@ -1093,7 +1093,7 @@ public class CachedDatastoreService
 		delete(entity.getKey());
 	}
 
-	public void deleteByCachedEntities(List<CachedEntity> list)
+	public void deleteByCachedEntities(Collection<CachedEntity> list)
 	{
 		if (list==null || list.isEmpty())
 			return; 
@@ -1105,10 +1105,18 @@ public class CachedDatastoreService
 		delete(keys);
 	}
 	
-	public void delete(List<Key> keys)
+	public void delete(Collection<Key> keys)
 	{
 		if (keys==null || keys.isEmpty())
 			return;
+		
+		if (bulkPutMode)
+		{
+			entitiesToBulkDelete.removeAll(keys);
+			entitiesToBulkDelete.addAll(keys);
+			return;
+		}
+		
 		
 		db.delete(keys);
 		
@@ -1128,6 +1136,13 @@ public class CachedDatastoreService
 	{
 		if (entityKey==null)
 			return;
+
+		if (bulkPutMode)
+		{
+			entitiesToBulkDelete.remove(entityKey);
+			entitiesToBulkDelete.add(entityKey);
+			return;
+		}
 		
 		
 		db.delete(entityKey);

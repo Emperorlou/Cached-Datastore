@@ -5,12 +5,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
-import org.mortbay.log.Log;
-
 import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.Key;
 import com.google.appengine.api.datastore.Text;
-import com.google.appengine.api.log.LogService.LogLevel;
 
 public class CachedEntity implements Cloneable,Serializable {
 	private static Logger log = Logger.getLogger(CachedEntity.class.toString());

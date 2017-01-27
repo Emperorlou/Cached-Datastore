@@ -1810,6 +1810,7 @@ public class CachedDatastoreService
 				autoAllocate = 1;
 			
 			preallocateIdsFor(kind, autoAllocate);
+			idList = preallocatedIds.get(kind);
 		}
 		
 		Long id = idList.get(idList.size()-1);

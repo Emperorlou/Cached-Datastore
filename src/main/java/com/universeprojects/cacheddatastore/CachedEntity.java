@@ -1,6 +1,7 @@
 package com.universeprojects.cacheddatastore;
 
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -11,6 +12,9 @@ import com.google.appengine.api.datastore.Text;
 
 public class CachedEntity implements Cloneable,Serializable {
 	private static Logger log = Logger.getLogger(CachedEntity.class.toString());
+	
+	
+	private transient Map<String,Object> attributes;
 	
 	private static final long serialVersionUID = 3034412029610092898L;
 	private Entity entity;
@@ -94,7 +98,6 @@ public class CachedEntity implements Cloneable,Serializable {
 		return entity;
 	}
 	
-	@SuppressWarnings("CloneDoesntCallSuperClone")
 	public CachedEntity clone()
 	{
 		return new CachedEntity(entity.clone());
@@ -141,7 +144,8 @@ public class CachedEntity implements Cloneable,Serializable {
 			}
 			else if (value instanceof List)
 			{
-				List list = (List)value;
+				@SuppressWarnings("unchecked")
+				List<Object> list = (List<Object>)value;
 				for(int i = 0; i<list.size(); i++)
 					if (originalKey == list.get(i))
 					{
@@ -288,6 +292,54 @@ public class CachedEntity implements Cloneable,Serializable {
 		return unsavedChanges;
 	}
 	
-	
+	/**
+	 * This key-value store is used to store arbitrary bits of data
+	 * on the entity. This will not be persisted and any data added
+	 * to the attributes will only exist on this particular instance 
+	 * of the CachedEntity. 
+	 * 
+	 * When this entity is serialized the attributes will not be serialized.
+	 * 
+	 * @param attributeKey
+	 * @param value
+	 */
+	public void setAttribute(String attributeKey, Object value)
+	{
+		if (attributes==null)
+			attributes = new HashMap<String,Object>();
+		
+		attributes.put(attributeKey, value);
+	}
 
+	/**
+	 * This key-value store is used to store arbitrary bits of data
+	 * on the entity. This will not be persisted and any data added
+	 * to the attributes will only exist on this particular instance 
+	 * of the CachedEntity. 
+	 * 
+	 * When this entity is serialized the attributes will not be serialized.
+	 * 
+	 * @param attributeKey
+	 * @return
+	 */
+	public Object getAttribute(String attributeKey)
+	{
+		if (attributes==null) return null;
+		return attributes.get(attributeKey);
+	}
+	
+	/**
+	 * This key-value store is used to store arbitrary bits of data
+	 * on the entity. This will not be persisted and any data added
+	 * to the attributes will only exist on this particular instance 
+	 * of the CachedEntity. 
+	 * 
+	 * When this entity is serialized the attributes will not be serialized.
+	 * 
+	 * @return The complete map of attributes. The returned map is modifiable and is the exact instance that is stored in the CachedEntity.
+	 */
+	public Map<String,Object> getAttributes()
+	{
+		return attributes;
+	}
 }

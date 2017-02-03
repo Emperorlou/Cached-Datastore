@@ -22,11 +22,11 @@ public class QueryHelper
 	/**
 	 * Use this if you only want to get a count of entities in the database.
 	 * 
-	 * This method will only count up to a maximum of 1000 entities.
+	 * This method will only count up to a maximum of 5000 entities.
 	 * 
 	 * This is more efficient than using the other filtered methods because it
-	 * doesn't actually fetch all the data from the database, only a list of
-	 * keys.
+	 * doesn't actually fetch all the data from the database, it only issues
+	 * a special count query.
 	 * 
 	 * @param kind
 	 * @param fieldName
@@ -34,10 +34,63 @@ public class QueryHelper
 	 * @param equalToValue
 	 * @return
 	 */
-	public Integer getFilteredList_Count(String kind, String fieldName, FilterOperator operator, Object equalToValue)
+	public Long getFilteredList_Count(String kind, String fieldName, FilterOperator operator, Object equalToValue)
 	{
+		return getFilteredList_Count(kind, 5000, fieldName, operator, equalToValue);
+	}
+	/**
+	 * Use this if you only want to get a count of entities in the database.
+	 * 
+	 * This method will only count up to the maximum amount specified in the limit parameter.
+	 * 
+	 * This is more efficient than using the other filtered methods because it
+	 * doesn't actually fetch all the data from the database, it only issues
+	 * a special count query.
+	 * 
+	 * @param kind
+	 * @param limit
+	 * @param fieldName
+	 * @param operator
+	 * @param equalToValue
+	 * @return
+	 */
+	public Long getFilteredList_Count(String kind, Integer limit, String fieldName, FilterOperator operator, Object equalToValue)
+	{
+		Query q = new Query(kind);
 		FilterPredicate f1 = new FilterPredicate(fieldName, operator, equalToValue);
-		return ds.fetchAsList_Keys(kind, f1, 5000).size();
+		q.setFilter(f1);
+		return ds.countEntities(q, limit);
+	}
+
+	public Long getFilteredList_Count(String kind, String fieldName, FilterOperator operator, Object equalToValue, String fieldName2, FilterOperator operator2, Object equalToValue2)
+	{
+		return getFilteredList_Count(kind, 5000, fieldName, operator, equalToValue, fieldName2, operator2, equalToValue2);
+	}
+	
+	public Long getFilteredList_Count(String kind, Integer limit, String fieldName, FilterOperator operator, Object equalToValue, String fieldName2, FilterOperator operator2, Object equalToValue2)
+	{
+		Query q = new Query(kind);
+		FilterPredicate f1 = new FilterPredicate(fieldName, operator, equalToValue);
+		FilterPredicate f2 = new FilterPredicate(fieldName2, operator2, equalToValue2);
+		Filter f = CompositeFilterOperator.and(f1, f2);
+		q.setFilter(f);
+		return ds.countEntities(q, limit);
+	}
+
+	public Long getFilteredList_Count(String kind, String fieldName, FilterOperator operator, Object equalToValue, String fieldName2, FilterOperator operator2, Object equalToValue2, String fieldName3, FilterOperator operator3, Object equalToValue3)
+	{
+		return getFilteredList_Count(kind, 5000, fieldName, operator, equalToValue, fieldName2, operator2, equalToValue2, fieldName3, operator3, equalToValue3);
+	}
+	
+	public Long getFilteredList_Count(String kind, Integer limit, String fieldName, FilterOperator operator, Object equalToValue, String fieldName2, FilterOperator operator2, Object equalToValue2, String fieldName3, FilterOperator operator3, Object equalToValue3)
+	{
+		Query q = new Query(kind);
+		FilterPredicate f1 = new FilterPredicate(fieldName, operator, equalToValue);
+		FilterPredicate f2 = new FilterPredicate(fieldName2, operator2, equalToValue2);
+		FilterPredicate f3 = new FilterPredicate(fieldName3, operator3, equalToValue3);
+		Filter f = CompositeFilterOperator.and(f1, f2, f3);
+		q.setFilter(f);
+		return ds.countEntities(q, 5000);
 	}
 
 	public List<CachedEntity> getFilteredList(String kind, int limit, Cursor cursor, String fieldName, FilterOperator operator, Object equalToValue)
@@ -58,22 +111,6 @@ public class QueryHelper
 		return ds.fetchAsList(kind, f1, 1000);
 	}
 
-	public Integer getFilteredList_Count(String kind, String fieldName, FilterOperator operator, Object equalToValue, String fieldName2, FilterOperator operator2, Object equalToValue2)
-	{
-		FilterPredicate f1 = new FilterPredicate(fieldName, operator, equalToValue);
-		FilterPredicate f2 = new FilterPredicate(fieldName2, operator2, equalToValue2);
-		Filter f = CompositeFilterOperator.and(f1, f2);
-		return ds.fetchAsList_Keys(kind, f, 5000).size();
-	}
-
-	public Integer getFilteredList_Count(String kind, String fieldName, FilterOperator operator, Object equalToValue, String fieldName2, FilterOperator operator2, Object equalToValue2, String fieldName3, FilterOperator operator3, Object equalToValue3)
-	{
-		FilterPredicate f1 = new FilterPredicate(fieldName, operator, equalToValue);
-		FilterPredicate f2 = new FilterPredicate(fieldName2, operator2, equalToValue2);
-		FilterPredicate f3 = new FilterPredicate(fieldName3, operator3, equalToValue3);
-		Filter f = CompositeFilterOperator.and(f1, f2, f3);
-		return ds.fetchAsList_Keys(kind, f, 5000).size();
-	}
 
 	public List<CachedEntity> getFilteredList(String kind)
 	{

@@ -1081,7 +1081,15 @@ public class CachedDatastoreService
 	}
 
 	public long countEntities(Query query) {
-		return db.prepare(query).countEntities(FetchOptions.Builder.withDefaults());
+		return countEntities(query, null);
+	}
+	
+	public long countEntities(Query query, Integer limit) {
+		FetchOptions fo = FetchOptions.Builder.withDefaults();
+		if (limit!=null)
+			fo.limit(limit);
+
+		return db.prepare(query).countEntities(fo);
 	}
 	
 	

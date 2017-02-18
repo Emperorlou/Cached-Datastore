@@ -702,12 +702,55 @@ public class CachedDatastoreService
 			for(Collection<Key> k:keys)
 				combinedKeys.addAll(k);
 		
-		return fetchEntitiesFromKeys(combinedKeys);
+		return get(combinedKeys);
 	}
 	
 	public List<CachedEntity> get(Key...keys)
 	{
 		return fetchEntitiesFromKeys(keys);
+	}
+	
+	public Map<Key, CachedEntity> getAsMap(Key...keys)
+	{
+		Map<Key, CachedEntity> result = new HashMap<Key, CachedEntity>();
+		List<CachedEntity> entities = get(keys);
+		for(CachedEntity e:entities)
+			if (e!=null)
+				result.put(e.getKey(), e);
+		
+		// Now do a second pass to add in all the keys that had no entity, assigning them to null in the result
+		for(Key k:keys)
+			if (result.containsKey(k)==false)
+				result.put(k, null);
+		
+		return result;
+	}
+	
+	public Map<Key, CachedEntity> getAsMap(Iterable<Key> keys)
+	{
+		Map<Key, CachedEntity> result = new HashMap<Key, CachedEntity>();
+		List<CachedEntity> entities = get(keys);
+		for(CachedEntity e:entities)
+			if (e!=null)
+				result.put(e.getKey(), e);
+		
+		// Now do a second pass to add in all the keys that had no entity, assigning them to null in the result
+		for(Key k:keys)
+			if (result.containsKey(k)==false)
+				result.put(k, null);
+		
+		return result;
+	}
+
+	public Map<Key, CachedEntity> getAsMap(Collection<Key>...keys)
+	{
+		List<Key> combinedKeys = new ArrayList<Key>();
+		
+		if (keys.length>0)
+			for(Collection<Key> k:keys)
+				combinedKeys.addAll(k);
+
+		return getAsMap(combinedKeys);
 	}
 	
 	private void addEntityToTransaction(Key entityKey) {
@@ -804,9 +847,12 @@ public class CachedDatastoreService
 	 * Note: This method will allow null keys to be passed in and will
 	 * include the null entries in the return as well. 
 	 * 
+	 * Deprecated: This method is going to be made private. Please use .get(Key...keys) instead.
+	 * 
 	 * @param keys
 	 * @return
 	 */
+	@Deprecated
 	public List<CachedEntity> fetchEntitiesFromKeys(Key...keys)
 	{
 		if (keys==null || keys.length==0)

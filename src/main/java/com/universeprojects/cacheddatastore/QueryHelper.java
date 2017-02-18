@@ -112,9 +112,26 @@ public class QueryHelper
 	}
 
 
+	/**
+	 * This fetches all entities of a given kind, limited to the first 1000 results.
+	 * 
+	 * @param kind
+	 * @return
+	 */
 	public List<CachedEntity> getFilteredList(String kind)
 	{
-		return ds.fetchAsList(kind, null, 1000);
+		return getFilteredList(kind, 1000);
+	}
+
+	/**
+	 * This fetches all entities of a given kind, but only up to the given limit.
+	 * @param kind
+	 * @param limit The maximum number of entities to return.
+	 * @return
+	 */
+	public List<CachedEntity> getFilteredList(String kind, int limit)
+	{
+		return ds.fetchAsList(kind, null, limit);
 	}
 
 	public List<CachedEntity> getFilteredList(String kind, String fieldName, Object equalToValue)

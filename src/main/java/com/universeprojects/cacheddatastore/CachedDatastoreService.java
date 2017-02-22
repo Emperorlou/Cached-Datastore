@@ -1025,6 +1025,11 @@ public class CachedDatastoreService
 		return fetchEntitiesFromKeys(keys);
 	}
 
+	public List<Key> fetchAsList_Keys(Query q, int limit, Cursor startEntityCursor)
+	{
+		return fetchKeys(q, limit, startEntityCursor);
+	}
+
 	public List<CachedEntity> fetchAsList(Query q, int limit, int offset)
 	{
 		List<Key> keys = fetchKeys(q, limit, offset);

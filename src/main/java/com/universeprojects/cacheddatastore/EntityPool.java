@@ -2,8 +2,10 @@ package com.universeprojects.cacheddatastore;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.google.appengine.api.datastore.Key;
 
@@ -19,21 +21,22 @@ public class EntityPool
 	final private CachedDatastoreService ds;
 	Map<Key, CachedEntity> pool = new HashMap<Key, CachedEntity>();
 	
+	Set<Key> queue = null;
+	
 	public EntityPool(CachedDatastoreService ds)
 	{
 		this.ds = ds;
 	}
 	
 	/**
-	 * This loads the given keys and/or lists of keys into the pool. It does so in a single call.
-	 * If one of the given keys is already in the pool, it will not be loaded again (that one will be skipped).
+	 * Adds the given list of Key or List<Key> objects to an internal queue. 
+	 * Calling loadEntities() (arguments or no arguments) will load the keys stored
+	 * in this queue.
 	 * 
-	 * @param keylist This must be a series of either Iterable<Key> or Key type objects.
-	 * @return The 'list' of entities that were added to the pool (doesn't include entities that were already in the pool).
+	 * @param keyList
 	 */
-	public Map<Key, CachedEntity> loadEntities(Object...keyList)
+	public void addToQueue(Object...keyList)
 	{
-		// Turn the given keyList mixed list into a list of keys we need to load (excluding keys that are already loaded into the pool)...
 		List<Key> keysToLoad = new ArrayList<Key>();
 		for(Object o:keyList)
 		{
@@ -44,7 +47,7 @@ public class EntityPool
 			}
 			else if (o instanceof Key)
 			{
-				if (pool.containsKey(o)==false)
+				if (pool.containsKey(o)==false && queue.contains(o)==false)
 					keysToLoad.add((Key)o);
 			}
 			else if (o instanceof Iterable)
@@ -58,12 +61,75 @@ public class EntityPool
 					else if ((key instanceof Key)==false)
 						throw new IllegalArgumentException("One of the objects in a given Iterable was not Key type.");
 					
-					if (pool.containsKey(key)==false)
+					if (pool.containsKey(key)==false && queue.contains(key)==false)
 						keysToLoad.add(key);
 				}
 			}
 			else
 				throw new IllegalArgumentException("An unsupported type was given: "+o.getClass().getSimpleName()+". Supported classes are Key and Iterable.");
+		}
+		
+		if (keysToLoad.isEmpty()==false)
+		{
+			if (queue==null)
+				queue = new HashSet<Key>();
+			
+			queue.addAll(keysToLoad);
+		}
+	}
+	
+	/**
+	 * This loads the given keys and/or lists of keys into the pool. It does so in a single call.
+	 * If one of the given keys is already in the pool, it will not be loaded again (that one will be skipped).
+	 * 
+	 * If any keys are waiting in the queue, they will be loaded as well. You can call loadEntities() (with no args)
+	 * to simply load entities stored in the queue.
+	 * 
+	 * @param keylist This must be a series of either Iterable<Key> or Key type objects.
+	 * @return The 'list' of entities that were added to the pool (doesn't include entities that were already in the pool).
+	 */
+	public Map<Key, CachedEntity> loadEntities(Object...keyList)
+	{
+		// Turn the given keyList mixed list into a list of keys we need to load (excluding keys that are already loaded into the pool)...
+		List<Key> keysToLoad = new ArrayList<Key>();
+		if (keyList!=null)
+		{
+			for(Object o:keyList)
+			{
+				if (o==null)
+				{
+					// Lets just skip this one
+					continue;
+				}
+				else if (o instanceof Key)
+				{
+					if (pool.containsKey(o)==false)
+						keysToLoad.add((Key)o);
+				}
+				else if (o instanceof Iterable)
+				{
+					@SuppressWarnings("unchecked")
+					Iterable<Key> list = (Iterable<Key>)o;
+					for(Key key:list)
+					{
+						if (key==null)
+							continue;	// Skip this one
+						else if ((key instanceof Key)==false)
+							throw new IllegalArgumentException("One of the objects in a given Iterable was not Key type.");
+						
+						if (pool.containsKey(key)==false)
+							keysToLoad.add(key);
+					}
+				}
+				else
+					throw new IllegalArgumentException("An unsupported type was given: "+o.getClass().getSimpleName()+". Supported classes are Key and Iterable.");
+			}
+		}
+		
+		if (queue!=null)
+		{
+			keysToLoad.addAll(queue);
+			queue.clear();
 		}
 		
 		// Now load the list of entities we need

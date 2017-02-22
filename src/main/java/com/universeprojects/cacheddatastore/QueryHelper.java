@@ -140,6 +140,12 @@ public class QueryHelper
 		return ds.fetchAsList(kind, f1, 1000);
 	}
 
+	public List<Key> getFilteredList_Keys(String kind, String fieldName, Object equalToValue)
+	{
+		FilterPredicate f1 = new FilterPredicate(fieldName, FilterOperator.EQUAL, equalToValue);
+		return ds.fetchAsList_Keys(kind, f1, 1000);
+	}
+
 	public List<CachedEntity> getFilteredList(String kind, String fieldName, Object equalToValue, String fieldName2, Object equalToValue2)
 	{
 		FilterPredicate f1 = new FilterPredicate(fieldName, FilterOperator.EQUAL, equalToValue);

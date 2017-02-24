@@ -47,7 +47,7 @@ public class EntityPool
 			}
 			else if (o instanceof Key)
 			{
-				if (pool.containsKey(o)==false && queue.contains(o)==false)
+				if (pool.containsKey(o)==false && (queue==null || queue.contains(o)==false))
 					keysToLoad.add((Key)o);
 			}
 			else if (o instanceof Iterable)
@@ -61,7 +61,7 @@ public class EntityPool
 					else if ((key instanceof Key)==false)
 						throw new IllegalArgumentException("One of the objects in a given Iterable was not Key type.");
 					
-					if (pool.containsKey(key)==false && queue.contains(key)==false)
+					if (pool.containsKey(key)==false && (queue==null || queue.contains(key)==false))
 						keysToLoad.add(key);
 				}
 			}

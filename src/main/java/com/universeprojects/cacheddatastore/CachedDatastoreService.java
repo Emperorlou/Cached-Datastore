@@ -162,8 +162,6 @@ public class CachedDatastoreService
 		{
 			
 			if (options==null)
-				//noinspection deprecation
-				//options = new RemoteApiOptions().server("playinitium.appspot.com", 443).credentials(System.getProperty("email"), System.getProperty("password"));
 				options = new RemoteApiOptions().server(System.getProperty("remoteAPIServer"), 443).useApplicationDefaultCredential();			
 			try
 			{
@@ -712,16 +710,12 @@ public class CachedDatastoreService
 	
 	public Map<Key, CachedEntity> getAsMap(Key...keys)
 	{
+		if (keys==null) return null;
+		
 		Map<Key, CachedEntity> result = new HashMap<Key, CachedEntity>();
 		List<CachedEntity> entities = get(keys);
-		for(CachedEntity e:entities)
-			if (e!=null)
-				result.put(e.getKey(), e);
-		
-		// Now do a second pass to add in all the keys that had no entity, assigning them to null in the result
-		for(Key k:keys)
-			if (result.containsKey(k)==false)
-				result.put(k, null);
+		for(int i = 0; i<keys.length; i++)
+			result.put(keys[i], entities.get(i));
 		
 		return result;
 	}
@@ -730,14 +724,13 @@ public class CachedDatastoreService
 	{
 		Map<Key, CachedEntity> result = new HashMap<Key, CachedEntity>();
 		List<CachedEntity> entities = get(keys);
-		for(CachedEntity e:entities)
-			if (e!=null)
-				result.put(e.getKey(), e);
-		
-		// Now do a second pass to add in all the keys that had no entity, assigning them to null in the result
-		for(Key k:keys)
-			if (result.containsKey(k)==false)
-				result.put(k, null);
+		Iterator<Key> iterator = keys.iterator();
+		int i = 0;
+		while(iterator.hasNext())
+		{
+			result.put(iterator.next(), entities.get(i));
+			i++;
+		}
 		
 		return result;
 	}

@@ -23,6 +23,7 @@ public class EntityPool
 	
 	Set<Key> queue = null;
 	
+	
 	public EntityPool(CachedDatastoreService ds)
 	{
 		this.ds = ds;
@@ -144,7 +145,7 @@ public class EntityPool
 	public CachedEntity get(Key entityKey)
 	{
 		if (pool.containsKey(entityKey)==false)
-			throw new IllegalArgumentException("The entityKey was NOT preloaded into the EntityPool. All entities should be bulk loaded into a pool before they can be accessed.");
+			throw new IllegalArgumentException("The entityKey was not preloaded into the EntityPool. All entities should be bulk loaded into a pool before they can be accessed.");
 		return pool.get(entityKey);
 	}
 	
@@ -156,6 +157,36 @@ public class EntityPool
 		for(Key key:entityKeys)
 			result.add(get(key));
 		
+		return result;
+	}
+	
+	/**
+	 * The number of entities that were loaded but came back null (entity not found). 
+	 * 
+	 * @return
+	 */
+	public int getFailedFetchCount()
+	{
+		int count = 0;
+		for(CachedEntity e:pool.values())
+			if (e==null)
+				count++;
+				
+		return count;
+	}
+	
+	/**
+	 * Returns all of the keys that failed to load due to the entity not being found.
+	 * 
+	 * @return
+	 */
+	public List<Key> getFailedFetchKeys()
+	{
+		List<Key> result = new ArrayList<Key>();
+		for(Key key:pool.keySet())
+			if (pool.get(key)==null)
+				result.add(key);
+				
 		return result;
 	}
 }

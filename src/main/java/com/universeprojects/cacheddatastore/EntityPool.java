@@ -189,4 +189,23 @@ public class EntityPool
 				
 		return result;
 	}
+
+	/**
+	 * This allows you to add CachedEntity entities to the pool directly. Use this
+	 * if you created a new entity and need it in the pool. Use this in any case where
+	 * the entity is already in your possession and it doesn't need to be fetched from
+	 * the DB.
+	 * 
+	 * @param entity
+	 */
+	public void addEntityDirectly(CachedEntity...entity)
+	{
+		for(CachedEntity e:entity)
+		{
+			Key key = e.getKey();
+			if (pool.containsKey(key)==false)
+				pool.put(key, e);
+		}
+		
+	}
 }

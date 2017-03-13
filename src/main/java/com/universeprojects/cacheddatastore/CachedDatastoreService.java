@@ -1109,11 +1109,9 @@ public class CachedDatastoreService
 		return new CDSIterable(pq.asIterable(FetchOptions.Builder.withChunkSize(500).offset(offset)));
 	}
 	
-	public Object prepareQuery(Query q)
+	public void prepareQuery(Query q)
 	{
 		pq = db.prepare(q);
-		
-		return null;
 	}
 
 	public KeyRange allocateIds(Key parentKey, String kind, int num) {

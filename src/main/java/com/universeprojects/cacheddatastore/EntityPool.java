@@ -144,8 +144,9 @@ public class EntityPool
 	
 	public CachedEntity get(Key entityKey)
 	{
+		if (entityKey==null) return null;
 		if (pool.containsKey(entityKey)==false)
-			throw new IllegalArgumentException("The entityKey was not preloaded into the EntityPool. All entities should be bulk loaded into a pool before they can be accessed.");
+			throw new IllegalArgumentException("The entityKey '"+entityKey+"' was not preloaded into the EntityPool. All entities should be bulk loaded into a pool before they can be accessed.");
 		return pool.get(entityKey);
 	}
 	

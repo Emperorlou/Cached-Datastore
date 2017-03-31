@@ -9,7 +9,6 @@ import java.util.logging.Logger;
 import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.Key;
 import com.google.appengine.api.datastore.Text;
-import com.universeprojects.gef.Utils;
 
 public class CachedEntity implements Cloneable,Serializable {
 	private static Logger log = Logger.getLogger(CachedEntity.class.toString());

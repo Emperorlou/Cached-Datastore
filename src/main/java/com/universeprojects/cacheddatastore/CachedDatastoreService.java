@@ -1155,6 +1155,11 @@ public class CachedDatastoreService
 		delete(keys);
 	}
 	
+	public void delete(Key...keys)
+	{
+		delete(Arrays.asList(keys));
+	}
+	
 	public void delete(Collection<Key> keys)
 	{
 		if (keys==null || keys.isEmpty())

@@ -909,7 +909,8 @@ public class CachedDatastoreService
 			addEntityToTransaction(keysThatStillNeedFetching);
 			
 			if (entitiesFromDB!=null) {
-				incrementStat(QUERYKEYCACHE_DB_ENTITIES, entitiesFromDB.size());
+				if (statsTracking)
+					incrementStat(QUERYKEYCACHE_DB_ENTITIES, entitiesFromDB.size());
 
 				// Add these entities to memcache right away
 				putEntitiesToMemcache(entitiesFromDB.values());

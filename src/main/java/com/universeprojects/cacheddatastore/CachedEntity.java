@@ -8,6 +8,7 @@ import java.util.logging.Logger;
 
 import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.Key;
+import com.google.appengine.api.datastore.KeyFactory;
 import com.google.appengine.api.datastore.Text;
 
 public class CachedEntity implements Cloneable,Serializable {
@@ -181,6 +182,11 @@ public class CachedEntity implements Cloneable,Serializable {
 	public Key getKey()
 	{
 		return entity.getKey();
+	}
+	
+	public String getUrlSafeKey()
+	{
+		return KeyFactory.keyToString(entity.getKey());
 	}
 	
 	public String getKind()

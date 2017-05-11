@@ -5,6 +5,7 @@ import java.util.List;
 import com.google.appengine.api.datastore.Cursor;
 import com.google.appengine.api.datastore.Key;
 import com.google.appengine.api.datastore.Query;
+import com.google.appengine.api.datastore.Query.CompositeFilter;
 import com.google.appengine.api.datastore.Query.CompositeFilterOperator;
 import com.google.appengine.api.datastore.Query.Filter;
 import com.google.appengine.api.datastore.Query.FilterOperator;
@@ -99,6 +100,25 @@ public class QueryHelper
 		return ds.fetchAsList(kind, f1, limit, cursor);
 	}
 
+	public List<CachedEntity> getFilteredList(String kind, int limit, Cursor cursor, String fieldName, FilterOperator operator, Object equalToValue, String fieldName2, FilterOperator operator2, Object equalToValue2)
+	{
+		FilterPredicate f1 = new FilterPredicate(fieldName, operator, equalToValue);
+		FilterPredicate f2 = new FilterPredicate(fieldName2, operator2, equalToValue2);
+		
+		Filter filter = CompositeFilterOperator.and(f1, f2);
+		return ds.fetchAsList(kind, filter, limit, cursor);
+	}
+
+	public List<CachedEntity> getFilteredList(String kind, int limit, Cursor cursor, String fieldName, FilterOperator operator, Object equalToValue, String fieldName2, FilterOperator operator2, Object equalToValue2, String fieldName3, FilterOperator operator3, Object equalToValue3)
+	{
+		FilterPredicate f1 = new FilterPredicate(fieldName, operator, equalToValue);
+		FilterPredicate f2 = new FilterPredicate(fieldName2, operator2, equalToValue2);
+		FilterPredicate f3 = new FilterPredicate(fieldName3, operator3, equalToValue3);
+		
+		Filter filter = CompositeFilterOperator.and(f1, f2, f3);
+		return ds.fetchAsList(kind, filter, limit, cursor);
+	}
+
 	public List<CachedEntity> getFilteredList(String kind, int limit, String fieldName, FilterOperator operator, Object equalToValue)
 	{
 		FilterPredicate f1 = new FilterPredicate(fieldName, operator, equalToValue);
@@ -146,6 +166,24 @@ public class QueryHelper
 		return ds.fetchAsList_Keys(kind, f1, 1000);
 	}
 
+	public List<Key> getFilteredList_Keys(String kind, String fieldName, FilterOperator operator, Object equalToValue, String fieldName2, FilterOperator operator2, Object equalToValue2)
+	{
+		FilterPredicate f1 = new FilterPredicate(fieldName, operator, equalToValue);
+		FilterPredicate f2 = new FilterPredicate(fieldName2, operator2, equalToValue2);
+		
+		Filter filter = CompositeFilterOperator.and(f1, f2);
+		return ds.fetchAsList_Keys(kind, filter, 1000);
+	}
+
+	public List<Key> getFilteredList_Keys(String kind, String fieldName, FilterOperator operator, Object equalToValue, String fieldName2, FilterOperator operator2, Object equalToValue2, String fieldName3, FilterOperator operator3, Object equalToValue3)
+	{
+		FilterPredicate f1 = new FilterPredicate(fieldName, operator, equalToValue);
+		FilterPredicate f2 = new FilterPredicate(fieldName2, operator2, equalToValue2);
+		FilterPredicate f3 = new FilterPredicate(fieldName3, operator3, equalToValue3);
+		
+		Filter filter = CompositeFilterOperator.and(f1, f2, f3);
+		return ds.fetchAsList_Keys(kind, filter, 1000);
+	}
 	public List<CachedEntity> getFilteredList(String kind, String fieldName, Object equalToValue, String fieldName2, Object equalToValue2)
 	{
 		FilterPredicate f1 = new FilterPredicate(fieldName, FilterOperator.EQUAL, equalToValue);

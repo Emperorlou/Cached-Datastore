@@ -28,6 +28,7 @@ task sourceJar(type: Jar) {
 String appengineVersion = "1.9.30"
 
 dependencies {
+	compile  "commons-codec:commons-codec:1.6"
     providedCompile "javax.servlet:javax.servlet-api:3.0.1"
 
     appengineSdk "com.google.appengine:appengine-java-sdk:${appengineVersion}"

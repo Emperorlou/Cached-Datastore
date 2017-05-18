@@ -124,5 +124,6 @@
 			<attribute name="javadoc_location" value="file:/C:/appengine-java-sdk-1.9.36/appengine-java-sdk-1.9.36/docs/javadoc/"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="war/WEB-INF/lib/commons-codec-1.6.jar"/>
 	<classpathentry kind="output" path="war/WEB-INF/classes"/>
 </classpath>

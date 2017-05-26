@@ -9,7 +9,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -48,6 +47,8 @@ public class CachedDatastoreService
 	private Logger log = Logger.getLogger(this.getClass().toString());	
 	private static ConcurrentHashMap<String,InstanceCacheWrapper> instanceCache = new ConcurrentHashMap<String,InstanceCacheWrapper>();
 	
+	public static boolean singleEntityMode = true; 
+	public static boolean singlePutMode = true; 
 	final public static boolean statsTracking = false;
 	final public static String MC_GETS = "Stats_MC_GETS";
 	final public static String DS_GETS = "Stats_DS_GETS";
@@ -85,6 +86,8 @@ public class CachedDatastoreService
 	Map<String,List<Long>> preallocatedIds = new HashMap<String, List<Long>>();
 	private Map<String, Integer> autoPreallocationCount = new HashMap<String, Integer>();
 
+	private Map<String,CachedEntity> entitiesFetchedThisRequest;
+	private Set<String> entitiesPutThisRequest;
 	
 	
 	public class EntityNotFetchedWithinTransactionException extends RuntimeException
@@ -93,7 +96,7 @@ public class CachedDatastoreService
 		private Entity entity;
 		public EntityNotFetchedWithinTransactionException(Entity entity)
 		{
-			super("The entity "+entity.getKey().getKind()+"("+entity.getKey().getId()+") was not fetched within the active transaction.");
+			super("The entity "+entity.getKey()+" was not fetched within the active transaction.");
 			this.entity = entity;
 		}
 		
@@ -103,6 +106,56 @@ public class CachedDatastoreService
 		}
 	}
 	
+	private boolean isEntityFetchedThisRequest(Key entityKey)
+	{
+		if (entitiesFetchedThisRequest==null) return false;
+		
+		return entitiesFetchedThisRequest.containsKey(entityKey.toString());
+	}
+	
+	private boolean isEntityPutThisRequest(Key entityKey)
+	{
+		if (entitiesPutThisRequest==null) return false;
+		
+		return entitiesPutThisRequest.contains(entityKey.toString());
+	}
+	
+	private void trackFetchedEntityThisRequest(CachedEntity entity)
+	{
+		if (entitiesFetchedThisRequest==null) entitiesFetchedThisRequest = new HashMap<>();
+		
+		entitiesFetchedThisRequest.put(entity.getKey().toString(), entity);
+	}
+	
+	private void trackFetchedEntityThisRequest(Collection<CachedEntity> entities)
+	{
+		if (entitiesFetchedThisRequest==null) entitiesFetchedThisRequest = new HashMap<>();
+		
+		for(CachedEntity entity:entities)
+			trackFetchedEntityThisRequest(entity);
+	}
+	
+	private CachedEntity getTrackedFetchedEntityThisRequest(Key entityKey)
+	{
+		if (entitiesFetchedThisRequest==null) return null;
+		
+		return entitiesFetchedThisRequest.get(entityKey.toString());
+	}
+	
+	private void trackPutEntityThisRequest(CachedEntity entity)
+	{
+		if (entitiesPutThisRequest==null) entitiesPutThisRequest = new HashSet<>();
+		
+		entitiesPutThisRequest.add(entity.getKey().toString());
+	}
+	
+	private void trackPutEntityThisRequest(Collection<CachedEntity> entities)
+	{
+		if (entitiesPutThisRequest==null) entitiesPutThisRequest = new HashSet<>();
+		
+		for(CachedEntity entity:entities)
+			trackPutEntityThisRequest(entity);
+	}
 	
 	/**
 	 * Copies all the field values from one entity over to another making 
@@ -522,6 +575,12 @@ public class CachedDatastoreService
 		
 		if (cacheEnabled && isTransactionActive()==false)
 			putEntitiesToMemcache(entitiesToPut);
+		
+		if (singleEntityMode)
+			trackFetchedEntityThisRequest(entities);
+
+		if (singlePutMode)
+			trackPutEntityThisRequest(entities);
 	}
 	
 	public void put(CachedEntity entity)
@@ -532,6 +591,9 @@ public class CachedDatastoreService
 			entitiesToBulkPut.add(entity);
 			return;
 		}
+		
+		if (singlePutMode && isEntityPutThisRequest(entity.getKey()))
+			throw new EntityAlreadyPutException("The "+entity.getKey()+" entity was already put in this request.");
 		
 		if (statsTracking)
 			incrementStat("Stats_"+entity.getKey().getKind());
@@ -559,6 +621,12 @@ public class CachedDatastoreService
 		
 		if (cacheEnabled && isTransactionActive()==false)
 			putEntityToMemcache(realEntity);
+		
+		if (singlePutMode)
+			trackPutEntityThisRequest(entity);
+		
+		if (singleEntityMode)
+			trackFetchedEntityThisRequest(entity);
 		
 		entity.unsavedChanges = false;
 	}
@@ -653,6 +721,12 @@ public class CachedDatastoreService
 		CachedEntity result;
 		if (entityKey==null) return null;
 		
+		if (singleEntityMode)
+		{
+			result = getTrackedFetchedEntityThisRequest(entityKey);
+			if (result!=null) return result;
+		}
+		
 		if (cacheEnabled && isTransactionActive()==false)
 		{
 			result = CachedEntity.wrap((Entity)mc.get(mcPrefix+entityKey.toString()));
@@ -660,7 +734,9 @@ public class CachedDatastoreService
 			{
 				result = CachedEntity.wrap(db.get(entityKey));
 				if(result != null)
+				{
 					mc.put(mcPrefix+entityKey.toString(), result.getEntity());
+				}
 				if (statsTracking)
 					incrementStat(DS_GETS);		// For statistics tracking of the cache's success
 			}
@@ -682,6 +758,9 @@ public class CachedDatastoreService
 			addEntityToTransaction(entityKey);
 			
 		}
+
+		if (singleEntityMode)
+			trackFetchedEntityThisRequest(result);
 		
 //		addEntityValuesToOldEntityValuesMap(result);	// So we can keep track of changes made to the fields on this entity
 		return result;
@@ -894,9 +973,25 @@ public class CachedDatastoreService
 			if (entitiesFromMC==null || entitiesFromMC.containsKey(requiredKeyString)==false)
 			{
 				// Oh, the memcache didn't have this entity, add it to the list we need to grab from the DB
+				
+				// HOWEVER, If we're using singleEntityMode, see if any of these entities are in our local request cache and use those entities instead of fetching them again
+				if (singleEntityMode)
+				{
+					CachedEntity alreadyFetchedEntity = getTrackedFetchedEntityThisRequest(key);
+					if (alreadyFetchedEntity!=null)
+					{
+						if (entitiesFromMC==null) entitiesFromMC = new HashMap<>();
+						entitiesFromMC.put(requiredKeyString, alreadyFetchedEntity.getEntity());
+						continue;
+					}
+						
+				}
+				
 				keysThatStillNeedFetching.add(key);
 			}
 		}
+
+
 		
 		// Now grab the missing entities from the DB...
 		Map<Key,Entity> entitiesFromDB = null;

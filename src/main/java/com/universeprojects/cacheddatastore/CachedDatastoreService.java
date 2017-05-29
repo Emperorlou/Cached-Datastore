@@ -47,8 +47,8 @@ public class CachedDatastoreService
 	private Logger log = Logger.getLogger(this.getClass().toString());	
 	private static ConcurrentHashMap<String,InstanceCacheWrapper> instanceCache = new ConcurrentHashMap<String,InstanceCacheWrapper>();
 	
-	public static boolean singleEntityMode = true; 
-	public static boolean singlePutMode = true; 
+	public static boolean singleEntityMode = false; 
+	public static boolean singlePutMode = false; 
 	final public static boolean statsTracking = false;
 	final public static String MC_GETS = "Stats_MC_GETS";
 	final public static String DS_GETS = "Stats_DS_GETS";
@@ -523,9 +523,30 @@ public class CachedDatastoreService
 		return false;
 	}
 
+	public void putIfChanged(CachedEntity...entities)
+	{
+		putIfChanged(Arrays.asList(entities));
+	}
+	
 	public void put(CachedEntity...entities)
 	{
 		put(Arrays.asList(entities));
+	}
+
+	public void putIfChanged(Collection<CachedEntity> entities)
+	{
+		if (entities instanceof List)
+		{
+			for(int i = entities.size()-1; i>=0; i--)
+			{
+				if (((List<CachedEntity>) entities).get(i) == null)
+					entities.remove(i);
+				if (((List<CachedEntity>) entities).get(i).isUnsaved()==false)
+					entities.remove(i);
+			}
+		}
+		
+		put(entities);
 	}
 	
 	public void put(Collection<CachedEntity> entities)

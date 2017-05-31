@@ -25,7 +25,11 @@ task sourceJar(type: Jar) {
     classifier "sources"
 }
 
+sourceCompatibility = 1.7
+targetCompatibility = 1.7
+
 String appengineVersion = "1.9.30"
+
 
 dependencies {
 	compile  "commons-codec:commons-codec:1.6"

@@ -94,6 +94,11 @@ public class QueryHelper
 		return ds.countEntities(q, 5000);
 	}
 
+	public List<CachedEntity> getFilteredList(String kind, int limit, Cursor cursor)
+	{
+		return ds.fetchAsList(kind, null, limit, cursor);
+	}
+
 	public List<CachedEntity> getFilteredList(String kind, int limit, Cursor cursor, String fieldName, FilterOperator operator, Object equalToValue)
 	{
 		FilterPredicate f1 = new FilterPredicate(fieldName, operator, equalToValue);
@@ -164,6 +169,12 @@ public class QueryHelper
 	{
 		FilterPredicate f1 = new FilterPredicate(fieldName, FilterOperator.EQUAL, equalToValue);
 		return ds.fetchAsList_Keys(kind, f1, 1000);
+	}
+
+	public List<Key> getFilteredList_Keys(String kind, int limit, Cursor cursor)
+	{
+		Query q = new Query(kind);
+		return ds.fetchAsList_Keys(q, limit, cursor);
 	}
 
 	public List<Key> getFilteredList_Keys(String kind, String fieldName, FilterOperator operator, Object equalToValue, String fieldName2, FilterOperator operator2, Object equalToValue2)

@@ -38,6 +38,8 @@ public class EntityPool
 	 */
 	public void addToQueue(Object...keyList)
 	{
+		if (keyList==null) return;
+		
 		List<Key> keysToLoad = new ArrayList<Key>();
 		for(Object o:keyList)
 		{
@@ -53,17 +55,23 @@ public class EntityPool
 			}
 			else if (o instanceof Iterable)
 			{
-				@SuppressWarnings("unchecked")
-				Iterable<Key> list = (Iterable<Key>)o;
-				for(Key key:list)
+				Iterable<?> list = (Iterable<?>)o;
+				for(Object obj:list)
 				{
-					if (key==null)
+					if (obj==null)
 						continue;	// Skip this one
-					else if ((key instanceof Key)==false)
-						throw new IllegalArgumentException("One of the objects in a given Iterable was not Key type.");
+					else if ((obj instanceof List))
+					{
+						addToQueue(obj);
+					}
+					else if ((obj instanceof Key))
+					{
+						if (pool.containsKey(obj)==false && (queue==null || queue.contains(obj)==false))
+							keysToLoad.add((Key)obj);
+					}
+					else
+						throw new IllegalArgumentException("One of the objects in a given Iterable was not Key or List type.");
 					
-					if (pool.containsKey(key)==false && (queue==null || queue.contains(key)==false))
-						keysToLoad.add(key);
 				}
 			}
 			else
@@ -95,43 +103,17 @@ public class EntityPool
 		List<Key> keysToLoad = new ArrayList<Key>();
 		if (keyList!=null)
 		{
-			for(Object o:keyList)
-			{
-				if (o==null)
-				{
-					// Lets just skip this one
-					continue;
-				}
-				else if (o instanceof Key)
-				{
-					if (pool.containsKey(o)==false)
-						keysToLoad.add((Key)o);
-				}
-				else if (o instanceof Iterable)
-				{
-					@SuppressWarnings("unchecked")
-					Iterable<Key> list = (Iterable<Key>)o;
-					for(Key key:list)
-					{
-						if (key==null)
-							continue;	// Skip this one
-						else if ((key instanceof Key)==false)
-							throw new IllegalArgumentException("One of the objects in a given Iterable was not Key type.");
-						
-						if (pool.containsKey(key)==false)
-							keysToLoad.add(key);
-					}
-				}
-				else
-					throw new IllegalArgumentException("An unsupported type was given: "+o.getClass().getSimpleName()+". Supported classes are Key and Iterable.");
-			}
+			addToQueue(keyList);
 		}
+		
 		
 		if (queue!=null)
 		{
 			keysToLoad.addAll(queue);
 			queue.clear();
 		}
+		
+		if (keysToLoad.isEmpty()) return new HashMap<>();
 		
 		// Now load the list of entities we need
 		Map<Key, CachedEntity> entities = ds.getAsMap(keysToLoad);

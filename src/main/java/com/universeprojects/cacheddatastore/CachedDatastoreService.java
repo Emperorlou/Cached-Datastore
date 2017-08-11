@@ -689,6 +689,8 @@ public class CachedDatastoreService
 
 	public CachedEntity refetch(Key entityKey)
 	{
+		if (entityKey==null)
+			throw new IllegalArgumentException("Key cannot be null.");
 		if (entityKey.isComplete()==false)
 			throw new IllegalArgumentException("The entity you are attempting to refetch hasn't even been saved to the DB yet as the key is incomplete.");
 		try

@@ -709,16 +709,7 @@ public class CachedDatastoreService
 		
 		Key key = entityToRefetchFromDB.getKey();
 		
-		if (key.isComplete()==false)
-			throw new IllegalArgumentException("The entity you are attempting to refetch hasn't even been saved to the DB yet as the key is incomplete.");
-		try
-		{
-			return get(key);
-		}
-		catch(EntityNotFoundException ise)
-		{
-			throw new IllegalStateException("Entity "+entityToRefetchFromDB.getKey()+" was not found in the database.", ise);
-		}
+		return refetch(key);
 	}
 	
 	public List<CachedEntity> refetch(List<CachedEntity> entitiesToRefetchFromDB) 

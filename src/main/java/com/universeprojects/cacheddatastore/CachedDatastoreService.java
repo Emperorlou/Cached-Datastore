@@ -686,23 +686,30 @@ public class CachedDatastoreService
 			return null;
 		}
 	}
-	
+
+	public CachedEntity refetch(Key entityKey)
+	{
+		if (entityKey==null)
+			throw new IllegalArgumentException("Key cannot be null.");
+		if (entityKey.isComplete()==false)
+			throw new IllegalArgumentException("The entity you are attempting to refetch hasn't even been saved to the DB yet as the key is incomplete.");
+		try
+		{
+			return get(entityKey);
+		}
+		catch(EntityNotFoundException ise)
+		{
+			throw new IllegalStateException("Entity "+entityKey+" was not found in the database.", ise);
+		}
+	}
+
 	public CachedEntity refetch(CachedEntity entityToRefetchFromDB) 
 	{
 		if (entityToRefetchFromDB==null) return null;
 		
 		Key key = entityToRefetchFromDB.getKey();
 		
-		if (key.isComplete()==false)
-			throw new IllegalArgumentException("The entity you are attempting to refetch hasn't even been saved to the DB yet as the key is incomplete.");
-		try
-		{
-			return get(key);
-		}
-		catch(EntityNotFoundException ise)
-		{
-			throw new IllegalStateException("Entity "+entityToRefetchFromDB.getKey()+" was not found in the database.", ise);
-		}
+		return refetch(key);
 	}
 	
 	public List<CachedEntity> refetch(List<CachedEntity> entitiesToRefetchFromDB) 

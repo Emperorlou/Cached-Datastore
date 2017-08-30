@@ -171,6 +171,12 @@ public class QueryHelper
 		return ds.fetchAsList_Keys(kind, f1, 1000);
 	}
 
+	public List<Key> getFilteredList_Keys(String kind, int limit)
+	{
+		Query q = new Query(kind);
+		return ds.fetchAsList_Keys(q, limit);
+	}
+
 	public List<Key> getFilteredList_Keys(String kind, int limit, Cursor cursor)
 	{
 		Query q = new Query(kind);

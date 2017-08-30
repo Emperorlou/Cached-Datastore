@@ -7,6 +7,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 import com.google.appengine.api.datastore.Entity;
+import com.google.appengine.api.datastore.EntityNotFoundException;
 import com.google.appengine.api.datastore.Key;
 import com.google.appengine.api.datastore.KeyFactory;
 import com.google.appengine.api.datastore.Text;
@@ -20,10 +21,13 @@ public class CachedEntity implements Cloneable,Serializable {
 	private static final long serialVersionUID = 3034412029610092898L;
 	private Entity entity;
 	boolean unsavedChanges = false;
+	boolean deleted = false;
+	boolean newEntity = false;
 	
 	public CachedEntity(Key key)
 	{
 		this(new Entity(key));
+		newEntity = true;
 	}
 	
 	/**
@@ -38,6 +42,7 @@ public class CachedEntity implements Cloneable,Serializable {
 	{
 		this(new Entity(kind, ds.getPreallocatedIdFor(kind)));
 
+		newEntity = true;
 		unsavedChanges = true;
 	}
 	
@@ -45,36 +50,42 @@ public class CachedEntity implements Cloneable,Serializable {
 	{
 		this(new Entity(kind));
 		
+		newEntity = true;
 		unsavedChanges = true;
 	}
 	
 	public CachedEntity(String kind, Key parent)
 	{
 		this(new Entity(kind, parent));
+		newEntity = true;
 		unsavedChanges = true;
 	}
 	
 	public CachedEntity(String kind, long id)
 	{
 		this(new Entity(kind, id));
+		newEntity = true;
 		unsavedChanges = true;
 	}
 	
 	public CachedEntity(String kind, long id, Key parent)
 	{
 		this(new Entity(kind, id, parent));
+		newEntity = true;
 		unsavedChanges = true;
 	}
 	
 	public CachedEntity(String kind, String keyName)
 	{
 		this(new Entity(kind, keyName));
+		newEntity = true;
 		unsavedChanges = true;
 	}
 	
 	public CachedEntity(String kind, String keyName, Key parent)
 	{
 		this(new Entity(kind, keyName, parent));
+		newEntity = true;
 		unsavedChanges = true;
 	}
 	
@@ -82,8 +93,13 @@ public class CachedEntity implements Cloneable,Serializable {
 	
 	private CachedEntity(Entity entity) {
 		this.entity = entity;
+		newEntity = false;
 	}
 	
+	public boolean isDeleted()
+	{
+		return deleted;
+	}
 	
 	/**
 	 * Since this class is meant to make Entity more compatible with
@@ -97,6 +113,24 @@ public class CachedEntity implements Cloneable,Serializable {
 	public Entity getEntity()
 	{
 		return entity;
+	}
+	
+	public void refetch(CachedDatastoreService ds)
+	{
+		
+		try
+		{
+			entity = ds.db.get(getKey());
+			if (ds.cacheEnabled && ds.isTransactionActive())
+			{
+				ds.addEntityToTransaction(getKey());
+			}
+			
+		}
+		catch (EntityNotFoundException e)
+		{
+			throw new IllegalStateException("Unable to refetch. Entity "+getKey()+" was deleted.");
+		}
 	}
 
 	public CachedEntity clone()

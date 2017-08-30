@@ -88,6 +88,7 @@ public class CachedDatastoreService
 
 	private Map<String,CachedEntity> entitiesFetchedThisRequest;
 	private Set<String> entitiesPutThisRequest;
+	private Set<String> entitiesDeletedThisRequest;
 	
 	
 	public class EntityNotFetchedWithinTransactionException extends RuntimeException
@@ -577,7 +578,7 @@ public class CachedDatastoreService
 			if (cacheEnabled && isTransactionActive())
 			{
 				// If this is a new entity, then we need to add the entity to the transaction first
-				if (entity.getKey().isComplete()==false)
+				if (entity.getKey().isComplete()==false || entity.newEntity)
 				{
 					addEntityToTransaction(realEntity.getKey());
 					markEntityChanged(realEntity);
@@ -586,6 +587,7 @@ public class CachedDatastoreService
 				{
 					markEntityChanged(realEntity);
 				}
+				entity.newEntity = false;
 					
 			}
 			
@@ -593,6 +595,7 @@ public class CachedDatastoreService
 		}
 		
 		db.put(entitiesToPut);
+		
 		
 		if (cacheEnabled && isTransactionActive()==false)
 			putEntitiesToMemcache(entitiesToPut);
@@ -623,9 +626,10 @@ public class CachedDatastoreService
 		if (cacheEnabled && isTransactionActive())
 		{
 			// If this is a new entity, then we need to add the entity to the transaction first
-			if (entity.getKey().isComplete()==false)
+			if (entity.getKey().isComplete()==false || entity.newEntity)
 			{
 				db.put(realEntity);
+				entity.newEntity = false;
 				addEntityToTransaction(realEntity.getKey());
 				markEntityChanged(realEntity);
 			}
@@ -633,11 +637,15 @@ public class CachedDatastoreService
 			{
 				markEntityChanged(realEntity);
 				db.put(realEntity);
+				entity.newEntity = false;
 			}
 				
 		}
 		else
+		{
 			db.put(realEntity);
+			entity.newEntity = false;
+		}
 
 		
 		if (cacheEnabled && isTransactionActive()==false)
@@ -853,7 +861,7 @@ public class CachedDatastoreService
 		return getAsMap(combinedKeys);
 	}
 	
-	private void addEntityToTransaction(Key entityKey) {
+	protected void addEntityToTransaction(Key entityKey) {
 		if (isTransactionActive())
 		{
 			if (transactionallyFetchedEntities==null)
@@ -862,7 +870,7 @@ public class CachedDatastoreService
 		}
 	}
 	
-	private void addEntityToTransaction(List<Key> entityKeys) {
+	protected void addEntityToTransaction(List<Key> entityKeys) {
 		if (isTransactionActive())
 		{
 			if (transactionallyFetchedEntities==null)
@@ -874,16 +882,42 @@ public class CachedDatastoreService
 	
 	private List<Key> fetchKeys(Query q, int limit)
 	{
-		return fetchKeys(q, limit, null);
+		q.setKeysOnly();
+		
+		prepareQuery(q);
+
+		int chunkSize=limit;
+		FetchOptions fo = FetchOptions.Builder.withLimit(limit).chunkSize(chunkSize).prefetchSize(limit);
+
+		List<Key> keys = new ArrayList<>();
+		List<Entity> entities = pq.asList(fo);
+		
+		int count = entities.size();
+		if (count>limit)
+			count = limit;
+		
+		for(int i = 0; i<count; i++)
+		{
+			Entity e = entities.get(i);
+			keys.add(e.getKey());
+		}
+		
+		lastQuery_endCursor = null;
+		
+		if (statsTracking)
+			incrementStat(QUERYKEYCACHE_QUERIES);
+		
+		
+		return keys;
 	}
-	
+
 	private List<Key> fetchKeys(Query q, int limit, Cursor startCursor)
 	{
 		q.setKeysOnly();
 		
 		prepareQuery(q);
 
-		int chunkSize=500;
+		int chunkSize=limit;
 		FetchOptions fo = FetchOptions.Builder.withLimit(limit).chunkSize(chunkSize);
 		if (startCursor!=null)
 			fo = fo.startCursor(startCursor);
@@ -917,12 +951,12 @@ public class CachedDatastoreService
 		
 		prepareQuery(q);
 
-		int chunkSize = 500;
+		int chunkSize = limit;
 		FetchOptions fo = FetchOptions.Builder.withLimit(limit).chunkSize(chunkSize).offset(offset);
 		
 
 		List<Key> keys = new ArrayList<>();
-		QueryResultList<Entity> entities = pq.asQueryResultList(fo);
+		List<Entity> entities = pq.asList(fo);
 
 		int count = entities.size();
 		if (count>limit)
@@ -934,7 +968,7 @@ public class CachedDatastoreService
 			keys.add(e.getKey());
 		}
 		
-		lastQuery_endCursor = entities.getCursor();
+		//lastQuery_endCursor = entities.getCursor();
 		
 		if (statsTracking)
 			incrementStat(QUERYKEYCACHE_QUERIES);
@@ -973,6 +1007,7 @@ public class CachedDatastoreService
 	@Deprecated
 	public List<CachedEntity> fetchEntitiesFromKeys(Iterable<Key> keys)
 	{
+		if (keys==null) return null;
 		//////////
 		// First try to fetch all entities from memcache...
 
@@ -1133,7 +1168,8 @@ public class CachedDatastoreService
 	
 	public List<CachedEntity> fetchAsList(Query q, int limit)
 	{
-		return fetchAsList(q, limit, null);
+		List<Key> keys = fetchKeys(q, limit);
+		return fetchEntitiesFromKeys(keys);
 	}
 
 	public List<CachedEntity> fetchAsList(Query q, int limit, Cursor startEntityCursor)
@@ -1145,6 +1181,11 @@ public class CachedDatastoreService
 	public List<Key> fetchAsList_Keys(Query q, int limit, Cursor startEntityCursor)
 	{
 		return fetchKeys(q, limit, startEntityCursor);
+	}
+
+	public List<Key> fetchAsList_Keys(Query q, int limit)
+	{
+		return fetchKeys(q, limit);
 	}
 
 	public List<CachedEntity> fetchAsList(Query q, int limit, int offset)
@@ -1258,6 +1299,24 @@ public class CachedDatastoreService
 		return db.prepare(query).countEntities(fo);
 	}
 	
+	private void addToDeletedKeysList(Key key)
+	{
+		if (key==null) throw new IllegalArgumentException("Key cannot be null.");
+		if (entitiesDeletedThisRequest==null) entitiesDeletedThisRequest = new HashSet<String>();
+		
+		String keyString = key.toString();
+		
+		if (entitiesPutThisRequest.contains(keyString))
+			throw new IllegalStateException("Attempted to delete an entity that was already put in this request.");
+		
+		entitiesDeletedThisRequest.add(keyString);
+	}
+	
+	private void addToDeletedKeysList(Collection<Key> keys)
+	{
+		for(Key key:keys)
+			addToDeletedKeysList(key);
+	}
 	
 	
 	public void delete(CachedEntity entity)

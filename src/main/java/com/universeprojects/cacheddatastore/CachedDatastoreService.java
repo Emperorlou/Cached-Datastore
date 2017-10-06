@@ -90,6 +90,8 @@ public class CachedDatastoreService
 	private Set<String> entitiesPutThisRequest;
 	private Set<String> entitiesDeletedThisRequest;
 	
+	private Transaction currentTransaction = null;
+	
 	
 	public class EntityNotFetchedWithinTransactionException extends RuntimeException
 	{
@@ -375,6 +377,11 @@ public class CachedDatastoreService
 			transactionallyDeletedEntities.clear();
 	}
 	
+	public boolean isBulkWriteModeOn()
+	{
+		return bulkPutMode;
+	}
+	
 	/**
 	 * When you call this method, the CachedDatastoreService will enter into a mode that 
 	 * will cause calls to .put() to not actually put the entities to the database until
@@ -474,8 +481,10 @@ public class CachedDatastoreService
 		if (bulkPutMode==true)
 			throw new IllegalStateException("Cannot use a transaction while the system is in bulk put mode.");
 		
+		if (currentTransaction!=null) throw new IllegalStateException("A transaction is already active");
+		
 		this.enforceEntityFetchWithinTransaction = enforceEntityFetchWithinTransaction;
-		db.beginTransaction(TransactionOptions.Builder.withXG(true));
+		currentTransaction = db.beginTransaction(TransactionOptions.Builder.withXG(true));
 	}
 	
 	public void commit() throws ConcurrentModificationException
@@ -483,8 +492,11 @@ public class CachedDatastoreService
 		
 		try
 		{
-			db.getCurrentTransaction().commit();
+			if (currentTransaction==null) throw new IllegalStateException("There is no active transaction to commit.");
+			
+			currentTransaction.commit();
 
+			currentTransaction = null;
 		}
 		catch(ConcurrentModificationException cme)
 		{
@@ -505,18 +517,17 @@ public class CachedDatastoreService
 	
 	public boolean isTransactionActive()
 	{
-		Transaction t = db.getCurrentTransaction(null);
-		if (t!=null && t.isActive())
+		if (currentTransaction!=null && currentTransaction.isActive())
 			return true;
 		return false;
 	}
 	
 	public boolean rollbackIfActive()
 	{
-		Transaction t = db.getCurrentTransaction(null);
-		if (t!=null && t.isActive())
+		if (currentTransaction!=null && currentTransaction.isActive())
 		{
-			t.rollback();
+			currentTransaction.rollback();
+			currentTransaction = null;
 			clearTransactionEntityTrackers();
 			return true;
 		}
@@ -695,6 +706,7 @@ public class CachedDatastoreService
 		}
 	}
 
+	@Deprecated
 	public CachedEntity refetch(Key entityKey)
 	{
 		if (entityKey==null)
@@ -711,6 +723,7 @@ public class CachedDatastoreService
 		}
 	}
 
+	@Deprecated
 	public CachedEntity refetch(CachedEntity entityToRefetchFromDB) 
 	{
 		if (entityToRefetchFromDB==null) return null;
@@ -720,6 +733,7 @@ public class CachedDatastoreService
 		return refetch(key);
 	}
 	
+	@Deprecated
 	public List<CachedEntity> refetch(List<CachedEntity> entitiesToRefetchFromDB) 
 	{
 		if (entitiesToRefetchFromDB==null) return null;

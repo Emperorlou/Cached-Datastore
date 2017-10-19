@@ -481,7 +481,7 @@ public class CachedDatastoreService
 		if (bulkPutMode==true)
 			throw new IllegalStateException("Cannot use a transaction while the system is in bulk put mode.");
 		
-		if (currentTransaction!=null) throw new IllegalStateException("A transaction is already active");
+		if (currentTransaction!=null && currentTransaction.isActive()) throw new IllegalStateException("A transaction is already active");
 		
 		this.enforceEntityFetchWithinTransaction = enforceEntityFetchWithinTransaction;
 		currentTransaction = db.beginTransaction(TransactionOptions.Builder.withXG(true));
@@ -492,7 +492,7 @@ public class CachedDatastoreService
 		
 		try
 		{
-			if (currentTransaction==null) throw new IllegalStateException("There is no active transaction to commit.");
+			if (currentTransaction==null || currentTransaction.isActive()==false) throw new IllegalStateException("There is no active transaction to commit.");
 			
 			currentTransaction.commit();
 

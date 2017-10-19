@@ -481,7 +481,7 @@ public class CachedDatastoreService
 		if (bulkPutMode==true)
 			throw new IllegalStateException("Cannot use a transaction while the system is in bulk put mode.");
 		
-		if (currentTransaction!=null && currentTransaction.isActive()) throw new IllegalStateException("A transaction is already active");
+		if (isTransactionActive()) throw new IllegalStateException("A transaction is already active");
 		
 		this.enforceEntityFetchWithinTransaction = enforceEntityFetchWithinTransaction;
 		currentTransaction = db.beginTransaction(TransactionOptions.Builder.withXG(true));
@@ -492,11 +492,12 @@ public class CachedDatastoreService
 		
 		try
 		{
-			if (currentTransaction==null || currentTransaction.isActive()==false) throw new IllegalStateException("There is no active transaction to commit.");
-			
-			currentTransaction.commit();
+			if (!isTransactionActive()) throw new IllegalStateException("There is no active transaction to commit.");
 
+			Transaction tx = currentTransaction;
 			currentTransaction = null;
+
+			tx.commit();
 		}
 		catch(ConcurrentModificationException cme)
 		{
@@ -517,16 +518,15 @@ public class CachedDatastoreService
 	
 	public boolean isTransactionActive()
 	{
-		if (currentTransaction!=null && currentTransaction.isActive())
-			return true;
-		return false;
+		return currentTransaction!=null && currentTransaction.isActive();
 	}
 	
 	public boolean rollbackIfActive()
 	{
-		if (currentTransaction!=null && currentTransaction.isActive())
-		{
-			currentTransaction.rollback();
+		if(currentTransaction!=null) {
+			if (currentTransaction.isActive()) {
+				currentTransaction.rollback();
+			}
 			currentTransaction = null;
 			clearTransactionEntityTrackers();
 			return true;

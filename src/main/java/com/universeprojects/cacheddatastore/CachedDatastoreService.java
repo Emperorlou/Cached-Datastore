@@ -406,6 +406,19 @@ public class CachedDatastoreService
 		if (isTransactionActive())
 			throw new IllegalStateException("Cannot use bulk-put-mode while a transaction is active.");
 		
+		// Notify of the put
+		if (isPutEventHandlerEnabled())
+		{
+			List<CachedEntity> list = new ArrayList<>(entitiesToBulkPut);
+			for(int i = list.size()-1; i>=0; i--)
+			{
+				CachedEntity entity = list.get(i);
+				if (putEventHandler(entity)==false)
+					entitiesToBulkPut.remove(entity);
+			}
+		}
+		
+		
 		 // Look for any incomplete keys and add them to the pile we need to complete before proceeding
 		Map<String, List<CachedEntity>> incompleteKeyEntities = new HashMap<String, List<CachedEntity>>();
 		if (entitiesToBulkPut.isEmpty()==false)
@@ -583,6 +596,12 @@ public class CachedDatastoreService
 		List<Entity> entitiesToPut = new ArrayList<Entity>();
 		for(CachedEntity entity:entities)
 		{
+			// Notify of the put
+			if (isPutEventHandlerEnabled())
+				if (putEventHandler(entity)==false)
+					continue;
+			
+			
 			Entity realEntity = entity.getEntity();
 			entitiesToPut.add(realEntity);
 			
@@ -632,6 +651,12 @@ public class CachedDatastoreService
 		
 		if (statsTracking)
 			incrementStat("Stats_"+entity.getKey().getKind());
+
+		// Notify of the put
+		if (isPutEventHandlerEnabled())
+			if (putEventHandler(entity)==false)
+				return;
+		
 		
 		Entity realEntity = entity.getEntity();
 		if (cacheEnabled && isTransactionActive())
@@ -2074,9 +2099,28 @@ public class CachedDatastoreService
 	{
 		autoPreallocationCount.put(kind, count);
 	}
+
+	/**
+	 * When this class is overriden and you want to use a putEventHandler, make sure this method returns true. This is an optimization.
+	 * 
+	 * @return
+	 */
+	protected boolean isPutEventHandlerEnabled()
+	{
+		return false;
+	}
 	
-	
-	
+	/**
+	 * Override this method when you want to have an option to veto the put of an entity or change an entity just before it is put to the database, project-wide.
+	 * 
+	 * @param entity
+	 * @return
+	 */
+	protected boolean putEventHandler(CachedEntity entity)
+	{
+		// Do nothing in the base implementation
+		return true;
+	}
 	
 	
 	

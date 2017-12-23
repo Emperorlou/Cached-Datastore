@@ -211,13 +211,16 @@ public class QueryHelper
 
 	public List<CachedEntity> getFilteredORList(Cursor cursor, String kind, String fieldName, Object equalToValue, String fieldName2, Object equalToValue2)
 	{
-		FilterPredicate f1 = new FilterPredicate(fieldName, FilterOperator.EQUAL, equalToValue);
-		FilterPredicate f2 = new FilterPredicate(fieldName2, FilterOperator.EQUAL, equalToValue2);
-		Filter filter = CompositeFilterOperator.or(f1, f2);
-		Query q = new Query(kind);
-		q.setFilter(filter);
-
-		return ds.fetchAsList(q, 1000, cursor);
+//		FilterPredicate f1 = new FilterPredicate(fieldName, FilterOperator.EQUAL, equalToValue);
+//		FilterPredicate f2 = new FilterPredicate(fieldName2, FilterOperator.EQUAL, equalToValue2);
+//		Filter filter = CompositeFilterOperator.or(f1, f2);
+//		Query q = new Query(kind);
+//		q.setFilter(filter);
+//
+//		return ds.fetchAsList(q, 1000, cursor);
+		List<CachedEntity> list = getFilteredList(kind, 1000, cursor, fieldName, FilterOperator.EQUAL, equalToValue);
+		list.addAll(getFilteredList(kind, 1000, cursor, fieldName2, FilterOperator.EQUAL, equalToValue2));
+		return list;
 	}
 
 	public List<CachedEntity> getFilteredORList(Cursor cursor, String kind, String fieldName, Object equalToValue, String fieldName2, Object equalToValue2, String fieldName3, Object equalToValue3)

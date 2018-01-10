@@ -191,4 +191,17 @@ public class EntityPool
 		}
 		
 	}
+
+	public void addNullEntityDirectly(Key...keys)
+	{
+		for(Key key:keys)
+		{
+			pool.put(key, null);
+		}
+	}
+	
+	public boolean contains(Key key)
+	{
+		return pool.containsKey(key);
+	}
 }

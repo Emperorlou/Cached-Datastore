@@ -401,6 +401,17 @@ public class CachedDatastoreService
 		return entitiesToBulkPut.size();
 	}
 	
+	public void cancelBulkWrite()
+	{
+		if (isTransactionActive())
+			throw new IllegalStateException("Cannot use bulk-put-mode while a transaction is active.");
+
+		if (entitiesToBulkPut!=null && entitiesToBulkPut.isEmpty()==false)
+			entitiesToBulkPut.clear();
+		
+		bulkPutMode = false;
+	}
+	
 	public void commitBulkWrite()
 	{
 		if (isTransactionActive())
@@ -1394,7 +1405,6 @@ public class CachedDatastoreService
 			return;
 		}
 		
-		
 		db.delete(keys);
 		
 		if (cacheEnabled && isTransactionActive())
@@ -2121,6 +2131,7 @@ public class CachedDatastoreService
 		// Do nothing in the base implementation
 		return true;
 	}
+
 	
 	
 	

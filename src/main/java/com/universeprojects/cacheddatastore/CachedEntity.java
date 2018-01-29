@@ -19,7 +19,7 @@ public class CachedEntity implements Cloneable,Serializable {
 	private transient Map<String,Object> attributes;
 	
 	private static final long serialVersionUID = 3034412029610092898L;
-	private Entity entity;
+	protected Entity entity;
 	boolean unsavedChanges = false;
 	boolean deleted = false;
 	boolean newEntity = false;

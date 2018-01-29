@@ -1,0 +1,12 @@
+apply plugin: 'com.google.cloud.tools.appengine'
+apply plugin: 'war'
+
+dependencies {
+    compile  "commons-codec:commons-codec:1.6"
+
+    compile "com.google.appengine:appengine-remote-api:$appengineVersion"
+
+    providedCompile "javax.servlet:javax.servlet-api:3.0.1"
+    providedCompile "com.google.appengine:appengine-api-1.0-sdk:$appengineVersion"
+    providedCompile "com.google.appengine:appengine-api-stubs:$appengineVersion"
+}

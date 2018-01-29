@@ -769,21 +769,40 @@ public class CachedDatastoreService
 		return refetch(key);
 	}
 	
-	@Deprecated
-	public List<CachedEntity> refetch(List<CachedEntity> entitiesToRefetchFromDB) 
+	
+	public void refetch(List<CachedEntity> entitiesToRefetchFromDB)
 	{
-		if (entitiesToRefetchFromDB==null) return null;
-		
-		List<Key> keysToRefetchFromDB = new ArrayList<Key>();
-		for(CachedEntity e:entitiesToRefetchFromDB)
+		try
 		{
-			if (e.getKey().isComplete()==false)
-				throw new IllegalArgumentException("One of the entities you are attempting to refetch hasn't even been saved to the DB yet as the key is incomplete. Key="+e.getKey());
-			keysToRefetchFromDB.add(e.getKey());
+			// Get the list of keys to fetch
+			List<Key> keysToFetch = new ArrayList<>();
+			for(CachedEntity entity:entitiesToRefetchFromDB)
+				keysToFetch.add(entity.getKey());
+				
+			// Now fetch the entities
+			Map<Key,Entity> refetchedEntities = db.get(keysToFetch);
+			
+			// Now add all the entities back into their respective containers 
+			for(CachedEntity entity:entitiesToRefetchFromDB)
+			{
+				Entity refetchedEntity = refetchedEntities.get(entity.getKey());
+				if (entity.entity==null) throw new EntityNotFoundException(entity.getKey());
+				
+				entity.entity = refetchedEntity;
+				
+				if (cacheEnabled && isTransactionActive())
+				{
+					addEntityToTransaction(entity.getKey());
+				}
+			}
+			
 		}
-		
-		return fetchEntitiesFromKeys(keysToRefetchFromDB);
+		catch (EntityNotFoundException e)
+		{
+			throw new IllegalStateException("Unable to refetch. Entity "+e.getKey()+" was deleted.");
+		}
 	}
+	
 	
 	/**
 	 * This simply gets a value from the instance cache, but only if it's not expired.

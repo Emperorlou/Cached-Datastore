@@ -16,3 +16,5 @@
 /war/WEB-INF/lib/appengine-jsr107cache-1.9.36.jar
 /war/WEB-INF/lib/appengine-remote-api.jar
 /war/WEB-INF/lib/jsr107cache-1.1.jar
+/.classpath
+/.project

@@ -114,6 +114,11 @@ public class QueryHelper
 		return ds.fetchAsList(kind, filter, limit, cursor);
 	}
 
+	public List<CachedEntity> getFilteredList(String kind, String fieldName, Object equalToValue, String fieldName2, Object equalToValue2, String fieldName3, Object equalToValue3)
+	{
+		return getFilteredList(kind, 1000, null, fieldName, FilterOperator.EQUAL, equalToValue, fieldName2, FilterOperator.EQUAL, equalToValue2, fieldName3, FilterOperator.EQUAL, equalToValue3);
+	}
+	
 	public List<CachedEntity> getFilteredList(String kind, int limit, Cursor cursor, String fieldName, FilterOperator operator, Object equalToValue, String fieldName2, FilterOperator operator2, Object equalToValue2, String fieldName3, FilterOperator operator3, Object equalToValue3)
 	{
 		FilterPredicate f1 = new FilterPredicate(fieldName, operator, equalToValue);
@@ -121,6 +126,22 @@ public class QueryHelper
 		FilterPredicate f3 = new FilterPredicate(fieldName3, operator3, equalToValue3);
 		
 		Filter filter = CompositeFilterOperator.and(f1, f2, f3);
+		return ds.fetchAsList(kind, filter, limit, cursor);
+	}
+
+	public List<CachedEntity> getFilteredList(String kind, String fieldName, Object equalToValue, String fieldName2, Object equalToValue2, String fieldName3, Object equalToValue3, String fieldName4, Object equalToValue4)
+	{
+		return getFilteredList(kind, 1000, null, fieldName, FilterOperator.EQUAL, equalToValue, fieldName2, FilterOperator.EQUAL, equalToValue2, fieldName3, FilterOperator.EQUAL, equalToValue3);
+	}
+	
+	public List<CachedEntity> getFilteredList(String kind, int limit, Cursor cursor, String fieldName, FilterOperator operator, Object equalToValue, String fieldName2, FilterOperator operator2, Object equalToValue2, String fieldName3, FilterOperator operator3, Object equalToValue3, String fieldName4, FilterOperator operator4, Object equalToValue4)
+	{
+		FilterPredicate f1 = new FilterPredicate(fieldName, operator, equalToValue);
+		FilterPredicate f2 = new FilterPredicate(fieldName2, operator2, equalToValue2);
+		FilterPredicate f3 = new FilterPredicate(fieldName3, operator3, equalToValue3);
+		FilterPredicate f4 = new FilterPredicate(fieldName4, operator4, equalToValue4);
+		
+		Filter filter = CompositeFilterOperator.and(f1, f2, f3, f4);
 		return ds.fetchAsList(kind, filter, limit, cursor);
 	}
 

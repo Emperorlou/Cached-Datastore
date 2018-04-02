@@ -192,6 +192,12 @@ public class QueryHelper
 		return ds.fetchAsList_Keys(kind, f1, 1000);
 	}
 
+	public List<Key> getFilteredList_Keys(String kind, int limit, String fieldName, Object equalToValue)
+	{
+		FilterPredicate f1 = new FilterPredicate(fieldName, FilterOperator.EQUAL, equalToValue);
+		return ds.fetchAsList_Keys(kind, f1, limit);
+	}
+
 	public List<Key> getFilteredList_Keys(String kind, int limit)
 	{
 		Query q = new Query(kind);
@@ -205,6 +211,15 @@ public class QueryHelper
 	}
 
 	public List<Key> getFilteredList_Keys(String kind, String fieldName, FilterOperator operator, Object equalToValue, String fieldName2, FilterOperator operator2, Object equalToValue2)
+	{
+		FilterPredicate f1 = new FilterPredicate(fieldName, operator, equalToValue);
+		FilterPredicate f2 = new FilterPredicate(fieldName2, operator2, equalToValue2);
+		
+		Filter filter = CompositeFilterOperator.and(f1, f2);
+		return ds.fetchAsList_Keys(kind, filter, 1000);
+	}
+
+	public List<Key> getFilteredList_Keys(String kind, int limit, String fieldName, FilterOperator operator, Object equalToValue, String fieldName2, FilterOperator operator2, Object equalToValue2)
 	{
 		FilterPredicate f1 = new FilterPredicate(fieldName, operator, equalToValue);
 		FilterPredicate f2 = new FilterPredicate(fieldName2, operator2, equalToValue2);

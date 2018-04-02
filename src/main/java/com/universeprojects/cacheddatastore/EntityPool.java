@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.appengine.api.datastore.EmbeddedEntity;
 import com.google.appengine.api.datastore.Key;
 
 /**
@@ -19,7 +20,7 @@ import com.google.appengine.api.datastore.Key;
 public class EntityPool
 {
 	final private CachedDatastoreService ds;
-	Map<Key, CachedEntity> pool = new HashMap<Key, CachedEntity>();
+	Map<Object, CachedEntity> pool = new HashMap<>();
 	
 	Set<Key> queue = null;
 	
@@ -48,6 +49,14 @@ public class EntityPool
 				// Lets just skip this one
 				continue;
 			}
+			else if (o instanceof CachedEntity)
+			{
+				addEntityDirectly((CachedEntity)o);
+			}
+			else if (o instanceof EmbeddedEntity)
+			{
+				addEmbeddedEntityDirectly((EmbeddedEntity)o);
+			}
 			else if (o instanceof Key)
 			{
 				if (pool.containsKey(o)==false && (queue==null || queue.contains(o)==false))
@@ -58,20 +67,7 @@ public class EntityPool
 				Iterable<?> list = (Iterable<?>)o;
 				for(Object obj:list)
 				{
-					if (obj==null)
-						continue;	// Skip this one
-					else if ((obj instanceof List))
-					{
-						addToQueue(obj);
-					}
-					else if ((obj instanceof Key))
-					{
-						if (pool.containsKey(obj)==false && (queue==null || queue.contains(obj)==false))
-							keysToLoad.add((Key)obj);
-					}
-					else
-						throw new IllegalArgumentException("One of the objects in a given Iterable was not Key or List type.");
-					
+					addToQueue(obj);
 				}
 			}
 			else
@@ -86,6 +82,7 @@ public class EntityPool
 			queue.addAll(keysToLoad);
 		}
 	}
+	
 	
 	/**
 	 * This loads the given keys and/or lists of keys into the pool. It does so in a single call.
@@ -124,7 +121,7 @@ public class EntityPool
 		return entities;
 	}
 	
-	public CachedEntity get(Key entityKey)
+	public CachedEntity get(Object entityKey)
 	{
 		if (entityKey==null) return null;
 		if (pool.containsKey(entityKey)==false)
@@ -163,16 +160,32 @@ public class EntityPool
 	 * 
 	 * @return
 	 */
-	public List<Key> getFailedFetchKeys()
+	public List<Object> getFailedFetchKeys()
 	{
-		List<Key> result = new ArrayList<Key>();
-		for(Key key:pool.keySet())
+		List<Object> result = new ArrayList<>();
+		for(Object key:pool.keySet())
 			if (pool.get(key)==null)
 				result.add(key);
 				
 		return result;
 	}
 
+	public void addEmbeddedEntityDirectly(EmbeddedEntity...entity)
+	{
+		for(EmbeddedEntity e:entity)
+		{
+//			if (e.getKey()==null) throw new RuntimeException("Cannot add an embedded entity if it doesn't have a key.");
+			
+			CachedEntity wrapper = new CachedEntity(e.getKey());
+			for(String fieldName:e.getProperties().keySet())
+			{
+				wrapper.setProperty(fieldName, e.getProperty(fieldName));
+			}
+			
+			pool.put(e, wrapper);
+		}
+	}
+	
 	/**
 	 * This allows you to add CachedEntity entities to the pool directly. Use this
 	 * if you created a new entity and need it in the pool. Use this in any case where

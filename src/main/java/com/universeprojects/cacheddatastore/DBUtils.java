@@ -8,6 +8,8 @@ import java.io.ObjectOutputStream;
 
 import org.apache.commons.codec.binary.Base64;
 
+import com.google.appengine.api.datastore.Text;
+
 public final class DBUtils
 {
     static final Base64 base64 = new Base64();
@@ -46,4 +48,20 @@ public final class DBUtils
 			throw new Exception(e);
 		}
     }	
+    
+    public static String textToString(Object value)
+    {
+    	if (value instanceof Text)
+    	{
+    		return ((Text)value).getValue();
+    	}
+    	else if (value instanceof String)
+    	{
+    		return (String)value;
+    	}
+    	else if (value==null)
+    		return null;
+    	else
+    		throw new RuntimeException("Invalid type "+value.getClass().getSimpleName()+". Expected Text or String.");
+    }
 }

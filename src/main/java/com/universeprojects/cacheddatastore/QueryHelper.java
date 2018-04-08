@@ -131,7 +131,7 @@ public class QueryHelper
 
 	public List<CachedEntity> getFilteredList(String kind, String fieldName, Object equalToValue, String fieldName2, Object equalToValue2, String fieldName3, Object equalToValue3, String fieldName4, Object equalToValue4)
 	{
-		return getFilteredList(kind, 1000, null, fieldName, FilterOperator.EQUAL, equalToValue, fieldName2, FilterOperator.EQUAL, equalToValue2, fieldName3, FilterOperator.EQUAL, equalToValue3);
+		return getFilteredList(kind, 1000, null, fieldName, FilterOperator.EQUAL, equalToValue, fieldName2, FilterOperator.EQUAL, equalToValue2, fieldName3, FilterOperator.EQUAL, equalToValue3, fieldName4, FilterOperator.EQUAL, equalToValue4);
 	}
 	
 	public List<CachedEntity> getFilteredList(String kind, int limit, Cursor cursor, String fieldName, FilterOperator operator, Object equalToValue, String fieldName2, FilterOperator operator2, Object equalToValue2, String fieldName3, FilterOperator operator3, Object equalToValue3, String fieldName4, FilterOperator operator4, Object equalToValue4)

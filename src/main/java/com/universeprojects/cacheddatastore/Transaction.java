@@ -37,12 +37,14 @@ public abstract class Transaction<T>
 		{
 			try
 			{
-				ds.beginTransaction(true);
+				if (disableTransaction()==false)
+					ds.beginTransaction(true);
 				
 				result = doTransaction(ds);
 				success = true;
 				
-				ds.commit();
+				if (disableTransaction()==false)
+					ds.commit();
 			}
 			catch(ConcurrentModificationException cme)
 			{
@@ -67,6 +69,11 @@ public abstract class Transaction<T>
 	public CachedEntity refetch(CachedEntity entity)
 	{
 		return ds.refetch(entity);
+	}
+	
+	public boolean disableTransaction()
+	{
+		return false;
 	}
 	
 }

@@ -48,7 +48,7 @@ public class CachedDatastoreService
 	private static ConcurrentHashMap<String,InstanceCacheWrapper> instanceCache = new ConcurrentHashMap<String,InstanceCacheWrapper>();
 	
 	public static boolean singleEntityMode = false; 
-	public static boolean singlePutMode = false; 
+	public static boolean singlePutMode = true; 
 	final public static boolean statsTracking = false;
 	final public static String MC_GETS = "Stats_MC_GETS";
 	final public static String DS_GETS = "Stats_DS_GETS";
@@ -150,6 +150,7 @@ public class CachedDatastoreService
 		if (entitiesPutThisRequest==null) entitiesPutThisRequest = new HashSet<>();
 		
 		entitiesPutThisRequest.add(entity.getKey().toString());
+		entity.setAttribute("onePutStacktrace", new RuntimeException("This is the stacktrace for the first place this entity was put."));
 	}
 	
 	private void trackPutEntityThisRequest(Collection<CachedEntity> entities)
@@ -392,6 +393,8 @@ public class CachedDatastoreService
 	{
 		if (isTransactionActive())
 			throw new IllegalStateException("Cannot use bulk-put-mode while a transaction is active.");
+		if (bulkPutMode)
+			throw new IllegalStateException("Bulk put mode is already active.");
 		
 		bulkPutMode = true;
 	}
@@ -658,7 +661,7 @@ public class CachedDatastoreService
 		}
 		
 		if (singlePutMode && isEntityPutThisRequest(entity.getKey()))
-			throw new EntityAlreadyPutException("The "+entity.getKey()+" entity was already put in this request.");
+			throw new EntityAlreadyPutException("The "+entity.getKey()+" entity was already put in this request.", (Exception)entity.getAttribute("onePutStacktrace"));
 		
 		if (statsTracking)
 			incrementStat("Stats_"+entity.getKey().getKind());
@@ -1402,7 +1405,8 @@ public class CachedDatastoreService
 		
 		List<Key> keys = new ArrayList<>();
 		for(CachedEntity e:list)
-			keys.add(e.getKey());
+			if (e!=null)
+				keys.add(e.getKey());
 		
 		delete(keys);
 	}

@@ -144,6 +144,7 @@ public class ShardedCounterService
 			}
 			catch (ConcurrentModificationException ignored)
 			{
+				ds.rollbackIfActive();
 				continue;	// TRY AGAIN
 			}
 			return;

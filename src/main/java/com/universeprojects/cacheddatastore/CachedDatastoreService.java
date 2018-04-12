@@ -647,7 +647,7 @@ public class CachedDatastoreService
 		if (singleEntityMode)
 			trackFetchedEntityThisRequest(entities);
 
-		if (singlePutMode)
+		if (singlePutMode && isTransactionActive()==false)
 			trackPutEntityThisRequest(entities);
 	}
 	
@@ -701,7 +701,7 @@ public class CachedDatastoreService
 		if (cacheEnabled && isTransactionActive()==false)
 			putEntityToMemcache(realEntity);
 		
-		if (singlePutMode)
+		if (singlePutMode && isTransactionActive()==false)
 			trackPutEntityThisRequest(entity);
 		
 		if (singleEntityMode)

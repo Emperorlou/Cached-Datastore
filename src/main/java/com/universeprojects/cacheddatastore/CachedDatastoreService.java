@@ -48,7 +48,7 @@ public class CachedDatastoreService
 	private static ConcurrentHashMap<String,InstanceCacheWrapper> instanceCache = new ConcurrentHashMap<String,InstanceCacheWrapper>();
 	
 	public static boolean singleEntityMode = false; 
-	public static boolean singlePutMode = true; 
+	public static boolean singlePutMode = false; 
 	final public static boolean statsTracking = false;
 	final public static String MC_GETS = "Stats_MC_GETS";
 	final public static String DS_GETS = "Stats_DS_GETS";

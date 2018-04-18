@@ -2155,8 +2155,29 @@ public class CachedDatastoreService
 		return true;
 	}
 
+	public boolean getLock(String key, int timeoutSeconds)
+	{
+		while(true)
+		{
+			IdentifiableValue identifiable = mc.getIdentifiable(key);
+
+			if (identifiable==null)
+			{
+				boolean success = mc.put(key, true, Expiration.byDeltaSeconds(timeoutSeconds), SetPolicy.ADD_ONLY_IF_NOT_PRESENT);
+				if (success) return true;
+			}
+		}
+	}
+
 	
-	
+	public void releaseLock(String key)
+	{
+		IdentifiableValue identifiable = mc.getIdentifiable(key);
+		if (identifiable==null)
+			return;
+		
+		mc.delete(key);
+	}
 	
 	
 	

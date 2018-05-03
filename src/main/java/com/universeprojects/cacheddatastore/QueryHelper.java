@@ -10,6 +10,7 @@ import com.google.appengine.api.datastore.Query.CompositeFilterOperator;
 import com.google.appengine.api.datastore.Query.Filter;
 import com.google.appengine.api.datastore.Query.FilterOperator;
 import com.google.appengine.api.datastore.Query.FilterPredicate;
+import com.google.appengine.api.datastore.Query.SortDirection;
 
 public class QueryHelper
 {
@@ -97,6 +98,16 @@ public class QueryHelper
 	public List<CachedEntity> getFilteredList(String kind, int limit, Cursor cursor)
 	{
 		return ds.fetchAsList(kind, null, limit, cursor);
+	}
+
+	public List<CachedEntity> getFilteredList_Sorted(String kind, int limit, Cursor cursor, String fieldName, boolean ascending)
+	{
+		SortDirection direction = SortDirection.DESCENDING;
+		if (ascending)
+			direction = SortDirection.ASCENDING;
+			
+		Query q = new Query(kind).addSort(fieldName, direction);
+		return ds.fetchAsList(q, limit, cursor);
 	}
 
 	public List<CachedEntity> getFilteredList(String kind, int limit, Cursor cursor, String fieldName, FilterOperator operator, Object equalToValue)

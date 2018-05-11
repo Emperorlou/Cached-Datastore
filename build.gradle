@@ -50,7 +50,7 @@ publishing {
                 username = "${System.getProperty("mavenUser")}"
                 password = "${System.getProperty("mavenPassword")}"
             }
-            url "http://dev.universeprojects.com/archiva/repository/snapshots/"
+            url "${System.getProperty("mavenUrl")}"
         }
     }
     publications {

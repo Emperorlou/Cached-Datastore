@@ -65,7 +65,7 @@ public class CachedDatastoreService
 	boolean cacheEnabled = true;
 	boolean queryModelCacheEnabled = false;
 	
-	Set<CachedEntity> entitiesToBulkPut = new HashSet<CachedEntity>();
+	Map<Key, CachedEntity> entitiesToBulkPut = new HashMap<>();
 	Set<Key> entitiesToBulkDelete = new HashSet<Key>();
 	boolean bulkPutMode = false;
 	
@@ -423,12 +423,12 @@ public class CachedDatastoreService
 		// Notify of the put
 		if (isPutEventHandlerEnabled())
 		{
-			List<CachedEntity> list = new ArrayList<>(entitiesToBulkPut);
+			List<CachedEntity> list = new ArrayList<>(entitiesToBulkPut.values());
 			for(int i = list.size()-1; i>=0; i--)
 			{
 				CachedEntity entity = list.get(i);
 				if (putEventHandler(entity)==false)
-					entitiesToBulkPut.remove(entity);
+					entitiesToBulkPut.remove(entity.getKey());
 			}
 		}
 		
@@ -436,7 +436,7 @@ public class CachedDatastoreService
 		 // Look for any incomplete keys and add them to the pile we need to complete before proceeding
 		Map<String, List<CachedEntity>> incompleteKeyEntities = new HashMap<String, List<CachedEntity>>();
 		if (entitiesToBulkPut.isEmpty()==false)
-			for(CachedEntity e:entitiesToBulkPut)
+			for(CachedEntity e : entitiesToBulkPut.values())
 				if (e.getKey().isComplete()==false)
 				{
 					List<CachedEntity> list = incompleteKeyEntities.get(e.getKind());
@@ -477,7 +477,7 @@ public class CachedDatastoreService
 			for(Key oldKey:keySet)
 			{
 				Key newKey = oldKeyToNewKeyMap.get(oldKey);
-				for(CachedEntity e:entitiesToBulkPut)
+				for(CachedEntity e:entitiesToBulkPut.values())
 				{
 					e.updateStoredKey(oldKey, newKey);
 				}
@@ -490,7 +490,7 @@ public class CachedDatastoreService
 		if (entitiesToBulkDelete.isEmpty()==false)
 			delete(entitiesToBulkDelete);
 		if (entitiesToBulkPut.isEmpty()==false)
-			put(entitiesToBulkPut);
+			put(entitiesToBulkPut.values());
 		
 		entitiesToBulkPut.clear();
 	}
@@ -592,8 +592,10 @@ public class CachedDatastoreService
 	{
 		if (bulkPutMode)
 		{
-			entitiesToBulkPut.removeAll(entities);
-			entitiesToBulkPut.addAll(entities);
+			List<Key> keys = new ArrayList<>();
+			for(CachedEntity ce : entities)
+				entitiesToBulkPut.put(ce.getKey(), ce);
+			
 			return;
 		}
 		
@@ -655,8 +657,8 @@ public class CachedDatastoreService
 	{
 		if (bulkPutMode)
 		{
-			entitiesToBulkPut.remove(entity);
-			entitiesToBulkPut.add(entity);
+			entitiesToBulkPut.remove(entity.getKey());
+			entitiesToBulkPut.put(entity.getKey(), entity);
 			return;
 		}
 		
@@ -1469,12 +1471,7 @@ public class CachedDatastoreService
 		entitiesToBulkDelete.remove(entityKey);
 		entitiesToBulkDelete.add(entityKey);
 		
-		for(CachedEntity ce : entitiesToBulkPut) {
-			Key ceKey = ce.getKey();
-			if(ceKey.getId() == entityKey.getId() && ce.getKind() == entityKey.getKind()) 
-				entitiesToBulkPut.remove(ce);
-			
-		}
+		entitiesToBulkPut.remove(entityKey);
 	}
 	
 

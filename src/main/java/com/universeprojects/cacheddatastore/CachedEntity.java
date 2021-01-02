@@ -13,6 +13,7 @@ import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.EntityNotFoundException;
 import com.google.appengine.api.datastore.Key;
 import com.google.appengine.api.datastore.KeyFactory;
+import com.google.appengine.api.datastore.RawValue;
 import com.google.appengine.api.datastore.Text;
 
 public class CachedEntity implements Cloneable,Serializable {
@@ -281,12 +282,22 @@ public class CachedEntity implements Cloneable,Serializable {
 	
 	public Object getProperty(String propertyName)
 	{
-		if(projected && projections != null && projections.contains(propertyName) == false)
-			return null;
-		if (entity.getProperty(propertyName) instanceof Text)
-			return ((Text)entity.getProperty(propertyName)).getValue();
-		else
-			return entity.getProperty(propertyName);
+		
+		Object result = null;
+		
+		if(projected && projections != null && projections.contains(propertyName) == false) 
+			return result;
+		
+		result = entity.getProperty(propertyName);
+		
+		if(result instanceof RawValue) 
+			result = ((RawValue) result).getValue();
+		
+		if(result instanceof Text) 
+			result = ((Text) result).getValue();
+		
+		
+		return result;
 	}
 	
 	public boolean hasProperty(String propertyName)

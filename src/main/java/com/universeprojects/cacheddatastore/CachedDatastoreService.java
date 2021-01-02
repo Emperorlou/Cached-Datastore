@@ -590,9 +590,19 @@ public class CachedDatastoreService
 	}
 	
 	public void put(Collection<CachedEntity> entities)
-	{
-		entities.removeIf(n -> n.projected);
+	{		
+		Iterator<CachedEntity> it = entities.iterator();
 		
+		while(it.hasNext()) {
+			CachedEntity ce = it.next();
+			
+			if(ce.projected) {
+				it.remove();
+				log.log(Level.WARNING, "Attempted to save a projected entity with key " + ce.getKey().toString());
+			}
+		}
+		
+				
 		if (bulkPutMode)
 		{
 			entitiesToBulkPut.removeAll(entities);
@@ -656,7 +666,10 @@ public class CachedDatastoreService
 	
 	public void put(CachedEntity entity)
 	{
-		if(entity.projected) return;
+		if(entity.projected) {
+			log.log(Level.WARNING, "Attempted to save a projected entity with key " + entity.getKey().toString());
+			return;
+		}
 		if (bulkPutMode)
 		{
 			entitiesToBulkPut.remove(entity);
@@ -1195,15 +1208,14 @@ public class CachedDatastoreService
 	 * This method returns partial entities.
 	 * @param limit
 	 * @param q
-	 * @param projections
+	 * @param projections 
 	 * @return
 	 */
-	public List<CachedEntity> fetchProjectedList(int limit, Query q, Collection<String> projections){
+	public List<CachedEntity> fetchProjectedList(int limit, Query q, Set<String> projections){
 		
-		Set<String> set = new HashSet<>(projections);
-		
-		for(String proj : set)
-			q.addProjection(new PropertyProjection(proj, Object.class));
+		for(String proj : projections) {
+			q.addProjection(new PropertyProjection(proj, null));
+		}
 		
 		prepareQuery(q);
 		

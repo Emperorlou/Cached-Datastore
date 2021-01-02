@@ -1,12 +1,11 @@
 package com.universeprojects.cacheddatastore;
 
-import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 
 import com.google.appengine.api.datastore.Cursor;
 import com.google.appengine.api.datastore.Key;
 import com.google.appengine.api.datastore.Query;
-import com.google.appengine.api.datastore.Query.CompositeFilter;
 import com.google.appengine.api.datastore.Query.CompositeFilterOperator;
 import com.google.appengine.api.datastore.Query.Filter;
 import com.google.appengine.api.datastore.Query.FilterOperator;
@@ -283,7 +282,7 @@ public class QueryHelper
 		return ds.fetchAsList(q, 1000, cursor);
 	}
 	
-	public List<CachedEntity> getProjectedList(Collection<String> projections, String kind, int limit, String name, FilterOperator operator, Object value){
+	public List<CachedEntity> getProjectedList(Set<String> projections, String kind, int limit, String name, FilterOperator operator, Object value){
 		
 		FilterPredicate f1 = new FilterPredicate(name, operator, value);
 		Query q = new Query(kind);
@@ -292,18 +291,18 @@ public class QueryHelper
 		return ds.fetchProjectedList(limit, q, projections);
 	}
 	
-	public List<CachedEntity> getProjectedList(Collection<String> projections, String kind, int limit, String name, FilterOperator operator, Object value,
+	public List<CachedEntity> getProjectedList(Set<String> projections, String kind, int limit, String name, FilterOperator operator, Object value,
 			String name2, FilterOperator operator2, Object value2){
 		
 		FilterPredicate f1 = new FilterPredicate(name, operator, value);
 		FilterPredicate f2 = new FilterPredicate(name2, operator2, value2);
 		Query q = new Query(kind);
-		q.setFilter(CompositeFilterOperator.or(f1, f2));				
+		q.setFilter(CompositeFilterOperator.and(f1, f2));				
 		
 		return ds.fetchProjectedList(limit, q, projections);
 	}
 	
-	public List<CachedEntity> getProjectedList(Collection<String> projections, String kind, int limit, String name, FilterOperator operator, Object value,
+	public List<CachedEntity> getProjectedList(Set<String> projections, String kind, int limit, String name, FilterOperator operator, Object value,
 			String name2, FilterOperator operator2, Object value2,
 			String name3, FilterOperator operator3, Object value3){
 		
@@ -311,7 +310,7 @@ public class QueryHelper
 		FilterPredicate f2 = new FilterPredicate(name2, operator2, value2);
 		FilterPredicate f3 = new FilterPredicate(name3, operator3, value3);
 		Query q = new Query(kind);
-		q.setFilter(CompositeFilterOperator.or(f1, f2, f3));				
+		q.setFilter(CompositeFilterOperator.and(f1, f2, f3));				
 		
 		return ds.fetchProjectedList(limit, q, projections);
 	}

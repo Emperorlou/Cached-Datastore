@@ -1425,8 +1425,10 @@ public class CachedDatastoreService
 		
 		if (bulkPutMode)
 		{
-			for(Key key : keys) 
-				addEntityToBulkDelete(key);
+			entitiesToBulkDelete.removeAll(keys);
+			entitiesToBulkDelete.addAll(keys);
+			
+			entitiesToBulkPut.keySet().removeAll(keys);
 			
 			return;
 		}
@@ -1452,7 +1454,11 @@ public class CachedDatastoreService
 
 		if (bulkPutMode)
 		{
-			addEntityToBulkDelete(entityKey);
+			entitiesToBulkDelete.remove(entityKey);
+			entitiesToBulkDelete.add(entityKey);
+			
+			entitiesToBulkPut.remove(entityKey);
+			
 			return;
 		}
 		
@@ -1465,13 +1471,6 @@ public class CachedDatastoreService
 			deleteEntityFromMemcache(entityKey);
 		
 //		reportDeletedEntity(entityKey);
-	}
-	
-	private void addEntityToBulkDelete(Key entityKey) {
-		entitiesToBulkDelete.remove(entityKey);
-		entitiesToBulkDelete.add(entityKey);
-		
-		entitiesToBulkPut.remove(entityKey);
 	}
 	
 

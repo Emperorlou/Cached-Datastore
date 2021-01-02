@@ -26,6 +26,7 @@ import com.google.appengine.api.datastore.Key;
 import com.google.appengine.api.datastore.KeyFactory;
 import com.google.appengine.api.datastore.KeyRange;
 import com.google.appengine.api.datastore.PreparedQuery;
+import com.google.appengine.api.datastore.PropertyProjection;
 import com.google.appengine.api.datastore.Query;
 import com.google.appengine.api.datastore.Query.Filter;
 import com.google.appengine.api.datastore.QueryResultList;
@@ -590,6 +591,8 @@ public class CachedDatastoreService
 	
 	public void put(Collection<CachedEntity> entities)
 	{
+		entities.removeIf(n -> n.projected);
+		
 		if (bulkPutMode)
 		{
 			entitiesToBulkPut.removeAll(entities);
@@ -653,6 +656,7 @@ public class CachedDatastoreService
 	
 	public void put(CachedEntity entity)
 	{
+		if(entity.projected) return;
 		if (bulkPutMode)
 		{
 			entitiesToBulkPut.remove(entity);
@@ -1187,8 +1191,32 @@ public class CachedDatastoreService
 		return result;
 	}
 	
-	
-	
+	/**
+	 * This method returns partial entities.
+	 * @param limit
+	 * @param q
+	 * @param projections
+	 * @return
+	 */
+	public List<CachedEntity> fetchProjectedList(int limit, Query q, Collection<String> projections){
+		
+		Set<String> set = new HashSet<>(projections);
+		
+		for(String proj : set)
+			q.addProjection(new PropertyProjection(proj, Object.class));
+		
+		prepareQuery(q);
+		
+		FetchOptions fo = FetchOptions.Builder.withLimit(limit).chunkSize(limit).prefetchSize(limit);
+
+		List<Entity> entities = pq.asList(fo);
+		List<CachedEntity> result = new ArrayList<>();
+
+		
+		entities.forEach(n -> result.add(CachedEntity.wrap(n, true)));
+		
+		return result;
+	}
 	
 	
 	public CachedEntity fetchSingleEntity(Query q)

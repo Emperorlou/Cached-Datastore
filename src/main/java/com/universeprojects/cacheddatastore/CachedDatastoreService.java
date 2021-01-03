@@ -591,11 +591,12 @@ public class CachedDatastoreService
 	
 	public void put(Collection<CachedEntity> entities)
 	{		
-		entities.removeIf(n -> {
-			if(n.projected) {
-				log.log(Level.WARNING, "Attempted to save a projected entity with key " + n.getKey().toString());
+		entities.removeIf(entity -> {
+			if(entity.projected) {
+				log.log(Level.WARNING, "Attempted to save a projected entity with key " + entity.getKey().toString());
 				return true;
-			};
+			}
+			else return false;
 		});
 		
 				

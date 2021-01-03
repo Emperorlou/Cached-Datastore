@@ -591,16 +591,12 @@ public class CachedDatastoreService
 	
 	public void put(Collection<CachedEntity> entities)
 	{		
-		Iterator<CachedEntity> it = entities.iterator();
-		
-		while(it.hasNext()) {
-			CachedEntity ce = it.next();
-			
-			if(ce.projected) {
-				it.remove();
-				log.log(Level.WARNING, "Attempted to save a projected entity with key " + ce.getKey().toString());
-			}
-		}
+		entities.removeIf(n -> {
+			if(n.projected) {
+				log.log(Level.WARNING, "Attempted to save a projected entity with key " + n.getKey().toString());
+				return true;
+			};
+		});
 		
 				
 		if (bulkPutMode)

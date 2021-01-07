@@ -1,11 +1,11 @@
 package com.universeprojects.cacheddatastore;
 
 import java.util.List;
+import java.util.Set;
 
 import com.google.appengine.api.datastore.Cursor;
 import com.google.appengine.api.datastore.Key;
 import com.google.appengine.api.datastore.Query;
-import com.google.appengine.api.datastore.Query.CompositeFilter;
 import com.google.appengine.api.datastore.Query.CompositeFilterOperator;
 import com.google.appengine.api.datastore.Query.Filter;
 import com.google.appengine.api.datastore.Query.FilterOperator;
@@ -280,7 +280,40 @@ public class QueryHelper
 		q.setFilter(filter);
 
 		return ds.fetchAsList(q, 1000, cursor);
-	}	
+	}
+	
+	public List<CachedEntity> getProjectedList(Set<String> projections, String kind, int limit, String name, FilterOperator operator, Object value){
+		
+		FilterPredicate f1 = new FilterPredicate(name, operator, value);
+		Query q = new Query(kind);
+		q.setFilter(f1);				
+		
+		return ds.fetchProjectedList(limit, q, projections);
+	}
+	
+	public List<CachedEntity> getProjectedList(Set<String> projections, String kind, int limit, String name, FilterOperator operator, Object value,
+			String name2, FilterOperator operator2, Object value2){
+		
+		FilterPredicate f1 = new FilterPredicate(name, operator, value);
+		FilterPredicate f2 = new FilterPredicate(name2, operator2, value2);
+		Query q = new Query(kind);
+		q.setFilter(CompositeFilterOperator.and(f1, f2));				
+		
+		return ds.fetchProjectedList(limit, q, projections);
+	}
+	
+	public List<CachedEntity> getProjectedList(Set<String> projections, String kind, int limit, String name, FilterOperator operator, Object value,
+			String name2, FilterOperator operator2, Object value2,
+			String name3, FilterOperator operator3, Object value3){
+		
+		FilterPredicate f1 = new FilterPredicate(name, operator, value);
+		FilterPredicate f2 = new FilterPredicate(name2, operator2, value2);
+		FilterPredicate f3 = new FilterPredicate(name3, operator3, value3);
+		Query q = new Query(kind);
+		q.setFilter(CompositeFilterOperator.and(f1, f2, f3));				
+		
+		return ds.fetchProjectedList(limit, q, projections);
+	}
 	
 	/**
 	 * This performs an ancestor query to fetch all children (within a limit) 

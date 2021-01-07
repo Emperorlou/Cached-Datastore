@@ -1,28 +1,35 @@
 package com.universeprojects.cacheddatastore;
 
 import java.io.Serializable;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.EntityNotFoundException;
 import com.google.appengine.api.datastore.Key;
 import com.google.appengine.api.datastore.KeyFactory;
+import com.google.appengine.api.datastore.RawValue;
 import com.google.appengine.api.datastore.Text;
 
 public class CachedEntity implements Cloneable,Serializable {
 	private static Logger log = Logger.getLogger(CachedEntity.class.toString());
 	
-	
 	private transient Map<String,Object> attributes;
 	
 	private static final long serialVersionUID = 3034412029610092898L;
+	
 	protected Entity entity;
 	boolean unsavedChanges = false;
 	boolean deleted = false;
 	boolean newEntity = false;
+	
+	public final boolean projected;
+	private Set<String> projections;
 	
 	public CachedEntity(Key key)
 	{
@@ -89,11 +96,14 @@ public class CachedEntity implements Cloneable,Serializable {
 		unsavedChanges = true;
 	}
 	
-	
-	
 	private CachedEntity(Entity entity) {
+		this(entity, false);
+	}
+	
+	private CachedEntity(Entity entity, boolean projected) {
 		this.entity = entity;
 		newEntity = false;
+		this.projected = projected;
 	}
 	
 	public boolean isDeleted()
@@ -131,6 +141,18 @@ public class CachedEntity implements Cloneable,Serializable {
 		{
 			throw new IllegalStateException("Unable to refetch. Entity "+getKey()+" was deleted.");
 		}
+	}
+	
+	public void setProjections(Collection<String> newProjections) {
+		if(projected == false || projections != null)
+			return;
+		
+		projections = new HashSet<>();
+		newProjections.forEach(n -> projections.add(n));
+	}
+	
+	public Set<String> getProjections(){
+		return projections;
 	}
 
 	public CachedEntity clone()
@@ -260,10 +282,22 @@ public class CachedEntity implements Cloneable,Serializable {
 	
 	public Object getProperty(String propertyName)
 	{
-		if (entity.getProperty(propertyName) instanceof Text)
-			return ((Text)entity.getProperty(propertyName)).getValue();
-		else
-			return entity.getProperty(propertyName);
+		
+		Object result = null;
+		
+		if(projected && projections != null && projections.contains(propertyName) == false) 
+			return result;
+		
+		result = entity.getProperty(propertyName);
+		
+		if(result instanceof RawValue) 
+			result = ((RawValue) result).getValue();
+		
+		if(result instanceof Text) 
+			result = ((Text) result).getValue();
+		
+		
+		return result;
 	}
 	
 	public boolean hasProperty(String propertyName)
@@ -309,10 +343,14 @@ public class CachedEntity implements Cloneable,Serializable {
 		unsavedChanges = true;
 	}
 	
-	public static CachedEntity wrap(Entity obj)
-	{
+	public static CachedEntity wrap(Entity obj, boolean projected) {
 		if (obj==null) return null;
 		return new CachedEntity(obj);
+	}
+	
+	public static CachedEntity wrap(Entity obj)
+	{
+		return wrap(obj, false);
 	}
 
 	public void setPropertyManually(String propertyName, Object value)

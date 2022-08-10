@@ -495,6 +495,53 @@ public class CachedDatastoreService
 		entitiesToBulkPut.clear();
 	}
 
+	/**
+	 * This equals can be used to compare anything, but specifically it's useful
+	 * to compare key equality.
+	 *
+	 * @param value1
+	 * @param value2
+	 * @return
+	 */
+	public static boolean equals(Object value1, Object value2)
+	{
+		if (value1 == value2) return true;
+
+		if (value1 instanceof Key && value2 instanceof Key)
+		{
+			// This is a special case that is necessary for bulkWriteMode. In
+			// bulkWriteMode,
+			// the value1==value2 test above would have found equality
+			// appropriately, therefore
+			// we must conclude that they are not equal
+			if (((Key) value1).isComplete() == false && ((Key) value2).isComplete() == false) return false;
+
+			if (((Key) value1).getId() == ((Key) value2).getId() && ((Key) value1).getKind().equals(((Key) value2).getKind()))
+				return true;
+			else
+				return false;
+		}
+		if (value1 != null && value2 != null && value1.equals(value2)) return true;
+
+		return false;
+	}
+
+	/**
+	 * Fetches entities from the save buffer
+	 * @param type
+	 * @param fieldName
+	 * @param equalToValue
+	 * @return
+	 */
+	public List<CachedEntity> interceptFromBulkPut(String type, String fieldName, Object equalToValue){
+		List<CachedEntity> result = new ArrayList<>();
+		for(CachedEntity ce : entitiesToBulkPut) {
+			if(equals(ce.getProperty(fieldName), equalToValue) && equals(ce.getKind(), type))
+				result.add(ce);
+		}
+		return result;
+	}
+
 
 	public void beginTransaction()
 	{

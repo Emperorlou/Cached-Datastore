@@ -3,7 +3,7 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.google.appengine:gradle-appengine-plugin:1.9.21'
+        classpath 'com.google.cloud.tools:appengine-gradle-plugin:2.4.3'
     }
 
 }
@@ -13,7 +13,7 @@ apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin: 'idea'
 apply plugin: 'war'
-apply plugin: "appengine"
+apply plugin: "com.google.cloud.tools.appengine"
 apply plugin: 'maven-publish'
 
 repositories {
@@ -35,7 +35,7 @@ dependencies {
 	compile  "commons-codec:commons-codec:1.6"
     providedCompile "javax.servlet:javax.servlet-api:3.0.1"
 
-    appengineSdk "com.google.appengine:appengine-java-sdk:${appengineVersion}"
+    implementation "com.google.appengine:appengine-java-sdk:${appengineVersion}"
     providedCompile "com.google.appengine:appengine-api-stubs:${appengineVersion}"
     providedCompile "com.google.appengine:appengine-api-1.0-sdk:${appengineVersion}"
     providedCompile "com.google.appengine:appengine-remote-api:${appengineVersion}"
